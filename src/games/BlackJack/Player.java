@@ -3,43 +3,51 @@ package games.BlackJack;
 import java.util.ArrayList;
 
 public class Player {
-    ArrayList<ArrayList<Card>> hands; // only needed if hands are split
-    ArrayList<Card> hand = new ArrayList<Card>();
+    ArrayList<ArrayList<Card>> hands = new ArrayList<ArrayList<Card>>();
+    ArrayList<Card> activeHand = new ArrayList<Card>();
     private int chips = 1500;
-    private int betThisRound = 0;
+    private int betThisRound[] = new int[24];
     private boolean splitHand = false;
+    private int activeHandIndex = 0;
+
     String name;
 
     public Player(String name) {
         this.name = name;
     }
 
-    public ArrayList<Card> getHand() {
-        return hand;
+    public ArrayList<Card> getActiveHand() {
+        return activeHand;
     }
 
-    public void addCardToHand(Card c) {
-        hand.add(c);
+    public ArrayList<ArrayList<Card>> getHands() {
+        return hands;
     }
 
-    public void addCardToSpecificHand(Card c, int handIndex){
-        hands.get(handIndex).add(c);
-    }
-
-    public ArrayList<Card> getSpecificHand(int index){
-        if(hasSplitHand()){
-            return hands.get(index);
+    public void addCardToActiveHand(Card c) {
+        if (activeHand.isEmpty()) {
+            hands.add(activeHand);
         }
-        return hand;
+        activeHand.add(c);
     }
+
+    public ArrayList<Card> setNextHandActive() {
+        if (hands.size() < activeHandIndex + 1) {
+            return null;
+        }
+        return activeHand = hands.get(activeHandIndex);
+    }
+
     public void bet(int amount) {
         chips -= amount;
-        betThisRound += amount;
+        betThisRound[activeHandIndex] += amount;
     }
 
     public void clearHand() {
-        hand.clear();
+        activeHand.clear();
         hands.clear();
+        betThisRound = new int[24];
+        activeHandIndex = 0;
         splitHand = false;
     }
 
@@ -47,25 +55,27 @@ public class Player {
         return name;
     }
 
-    public int betThisRound() {
-        return betThisRound;
+    public int betOnActiveHand() {
+        return betThisRound[activeHandIndex];
     }
 
     public boolean hasHand() {
-        return !hand.isEmpty();
+        return !hands.isEmpty();
     }
 
     public int getChips() {
         return chips;
     }
 
-    public boolean hasSplitHand(){
+    public boolean hasSplitHand() {
         return splitHand;
     }
 
-    public void splitHand(){
+    public void splitHand() {
         splitHand = true;
-        //todo logic implementieren
+        ArrayList<Card> nHand = new ArrayList<Card>();
+        nHand.add(activeHand.remove(1));
+        hands.add(nHand);
     }
 
 }

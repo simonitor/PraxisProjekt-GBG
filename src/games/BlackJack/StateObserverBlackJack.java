@@ -21,6 +21,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     private Player currentPlayer;
     private boolean dealersTurn = false;
     private boolean isNextActionDeterministic = false;
+    private ArrayList<Integer> availableRandoms = new ArrayList<Integer>();
 
     public StateObserverBlackJack() {
         // defaultState
@@ -33,11 +34,24 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     enum BlackJackActionDet {
         BET1(0), BET5(1), BET10(2), BET25(3), BET50(4), BET100(5), HIT(6), STAND(7), DOUBLEDOWN(8), SPLIT(9),
         INSURANCE(10);
-        
 
         private int action;
 
         private BlackJackActionDet(int action) {
+            this.action = action;
+        }
+
+        public int getAction() {
+            return this.action;
+        }
+    }
+
+    enum BlackJackActionNonDet {
+        CHECKFORBLACKJACK(0), CHECKFORBUST(1), DETECTPLAYERSTURN(2);
+
+        private int action;
+
+        private BlackJackActionNonDet(int action) {
             this.action = action;
         }
 
@@ -226,15 +240,15 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             // Split - Player wants to split a pair -
             // Condition: (Handsize == 2) and both cards are from
             // the same Rank e.g. 8 8, player has enough chips to do so
-            ArrayList<Card> playersHand = currentPlayer.getHand();
+            ArrayList<Card> playersHand = currentPlayer.getActiveHand();
             if (playersHand.size() == 2 && playersHand.get(0).rank.equals(playersHand.get(1).rank)
-                    && currentPlayer.betThisRound() <= currentPlayer.getChips()) {
+                    && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
                 availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.SPLIT.getAction()));
             }
             // Doubledown - Player gets dealt exactly one more card and doubles the
             // betamount for this hand
             // Condition: Handsize == 2, player has enough chips to do so
-            if (playersHand.size() == 2 && currentPlayer.betThisRound() <= currentPlayer.getChips()) {
+            if (playersHand.size() == 2 && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
                 availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.DOUBLEDOWN.getAction()));
             }
             // TODO: Insurance
@@ -320,19 +334,24 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             break;
         case DOUBLEDOWN:
             // double his bet
-            currentPlayer.bet(currentPlayer.betThisRound());
+            currentPlayer.bet(currentPlayer.betOnActiveHand());
             // he will get exactly one more card dealt
             // isNextActionDeterministic = true;
             // nondeterministicAdvance Deal card to player??
             break;
         case SPLIT:
             currentPlayer.splitHand();
-            // Der Spieler Spielt nun zwei Haende, seine erste Hand braucht eine weitere Karte -> Nondeterministisches Event
-            // nachdem er seine 1. Hand fertig gespielt hat braucht seine 2. Hand eine Karte -> Nondeterministisches Event
-            // Wann ist eine Hand fertig? Wenn ein Blackjack oder 21 erreicht wurde, bei Stand und einem Bust der bei jedem 
+            // Der Spieler Spielt nun zwei Haende, seine erste Hand braucht eine weitere
+            // Karte -> Nondeterministisches Event
+            // nachdem er seine 1. Hand fertig gespielt hat braucht seine 2. Hand eine Karte
+            // -> Nondeterministisches Event
+            // Wann ist eine Hand fertig? Wenn ein Blackjack oder 21 erreicht wurde, bei
+            // Stand und einem Bust der bei jedem
             // DOUBLEDOWN und HIT auftreten kann.
-            // Eine Gesplittete Hand erneut zu splitten ist vorerst nicht moeglich und in je nach Regeln auch verboten
-            // Wenn Asse gesplittet werden kann je nach Hausregeln nur eine Weitere Karte pro Hand genommen werden
+            // Eine Gesplittete Hand erneut zu splitten ist vorerst nicht moeglich und in je
+            // nach Regeln auch verboten
+            // Wenn Asse gesplittet werden kann je nach Hausregeln nur eine Weitere Karte
+            // pro Hand genommen werden
             break;
         // case INSURANCE: break;
         }
@@ -351,12 +370,16 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public boolean isNextActionDeterministic() {
-        return false;
+        return isNextActionDeterministic;
+
     }
 
     @Override
     public ACTIONS getNextNondeterministicAction() {
-        return null;
+        if (availableRandoms.isEmpty()) {
+            return null;
+        }
+        return ACTIONS.fromInt(availableRandoms.remove(0));
     }
 
     @Override
@@ -366,7 +389,8 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public int getNumAvailableRandoms() {
-        return 0;
+        // 52cards*6decks
+        return 52 * 6;
     }
 
     @Override
