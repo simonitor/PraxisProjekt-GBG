@@ -16,17 +16,20 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     private static final long serialVersionUID = 1L;
     private Player p1;
-    private Dealer dealer;
     private ArrayList<Types.ACTIONS> availableActions = new ArrayList<Types.ACTIONS>();
     private Player currentPlayer;
     private boolean dealersTurn = false;
     private boolean isNextActionDeterministic = false;
     private ArrayList<Integer> availableRandoms = new ArrayList<Integer>();
+    private Deck deck = new Deck();
+    private Player dealer;
+    private Player players[] = new Player[2];
+    private int playersTurn = 0;
 
     public StateObserverBlackJack() {
         // defaultState
         // adding dealer and player/s
-        dealer = new Dealer();
+        dealer = new Player("dealer");
         p1 = new Player("p1");
         currentPlayer = p1;
     }
@@ -47,7 +50,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     }
 
     enum BlackJackActionNonDet {
-        CHECKFORBLACKJACK(0), CHECKFORBUST(1), DETECTPLAYERSTURN(2);
+        DEALCARD(0);
 
         private int action;
 
@@ -176,7 +179,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     }
 
     @Override
-    public StateObservation getPrecedingAfterstate() {
+    public StateObservation precedingAfterstate() {
         return null;
     }
 
@@ -278,7 +281,11 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public int getPlayer() {
-        return 0;
+        return playersTurn;
+    }
+
+    public void setPlayer(int p) {
+        playersTurn = p;
     }
 
     @Override
@@ -288,13 +295,14 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public int getNumPlayers() {
-        return 0;
+        return 2;
     }
 
     @Override
     public void advanceDeterministic(ACTIONS action) {
 
         BlackJackActionDet a = BlackJackActionDet.values()[action.toInt()];
+        isNextActionDeterministic = true;
         switch (a) {
         case BET1:
             currentPlayer.bet(1);
@@ -316,18 +324,11 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             break;
         case STAND:
             // assign next player, currently there is only one so its the dealers turn
-            dealersTurn = true;
-            currentPlayer = null;
+            isNextActionDeterministic = false;
+            passToNextPlayer();
             break;
         case HIT:
             // The player wants another card, this should be a nondetermenistic Event
-            /**
-             * Frage merken: Falls jede moeglich Auszuteilende Karte ein Available Random
-             * ist und man diese Up to Date halten wuerde, haetten die Agenten Ueberblick
-             * darueber welche Karten noch im Deck vorhanden sind oder? Das waere genau dass
-             * was man beim Kartenzaehlen machen wuerde.
-             * 
-             */
             // isNextActionDeterministic = true;
             // nondeterministicAdvance Deal card to player??
             // check if he is bust
@@ -358,14 +359,102 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     }
 
+    public boolean isDealPhase() {
+        return true;
+    }
+
     @Override
     public void advanceNondeterministic() {
-
+        advanceDeterministic(getNextNondeterministicAction());
     }
 
     @Override
     public void advanceNondeterministic(ACTIONS action) {
+        if (isNextActionDeterministic) {
+            throw new RuntimeException("Next action should be deterministic");
+        }
+        BlackJackActionNonDet a = BlackJackActionNonDet.values()[action.toInt()];
+        switch (a) {
+        case DEALCARD:
+            // NonDeterministic part
+            currentPlayer.addCardToActiveHand(deck.draw());
 
+            // Consequenses of it
+            boolean isHandFinished = false;
+
+            if (isDealPhase()) {
+                passToNextPlayer();
+                isNextActionDeterministic = false;
+            } else if (!currentPlayer.name.equals("dealer")) {
+                ArrayList<Card> currentHand = currentPlayer.getActiveHand();
+                BlackJackActionDet lastAction = BlackJackActionDet.values()[getLastMove()];
+                switch (lastAction) {
+                case HIT:
+                case SPLIT:
+                    if (checkForBlackJack(currentHand) || isBust(currentHand) || getHandValue(currentHand) == 21) {
+                        isHandFinished = true;
+                    }
+                    break;
+                case DOUBLEDOWN:
+                    isHandFinished = true;
+                    break;
+                }
+                if (isHandFinished) {
+                    // check for more hands
+                    if (currentPlayer.setNextHandActive() != null) {
+                        // The player has more hands
+                        isNextActionDeterministic = false;
+                    } else {
+                        isNextActionDeterministic = true;
+                        passToNextPlayer();
+                    }
+                } else {
+                    isNextActionDeterministic = true;
+                }
+            }
+
+            break;
+        }
+
+    }
+
+    /**
+     * 
+     * 
+     * 
+     * Logik: If(dealphase){ passToNext; deterministic = False; }
+     * 
+     * else if( playersTurn && handsize > 2){ switch(lastAction) case HIt,
+     * DoubleDown, Split: check HandFinished = true oder false if (isHandFinished) {
+     * // check for more hands if (currentPlayer.setNextHandActive() != null) { //
+     * There are more hands isNextActionDeterministic = false; return; } else {
+     * isNextActionDeterministic = true; passToNextPlayer(); } }else
+     * isNextActionDeterministic = true }
+     */
+
+    public boolean checkForBlackJack(ArrayList<Card> hand) {
+        return hand.get(0).rank.getValue() + hand.get(1).rank.getValue() == 21 && hand.size() == 2;
+    }
+
+    public int getHandValue(ArrayList<Card> hand) {
+        int result = 0;
+        int aces = 0;
+        for (Card c : hand) {
+            if (c.rank.equals(Card.Rank.ACE)) {
+                aces++;
+            }
+            result = c.rank.getValue();
+        }
+        for (int i = 0; i < aces; i++) {
+            if (result > 21) {
+                result -= 10;
+            }
+        }
+        return result;
+    }
+
+    public boolean isBust(ArrayList<Card> hand) {
+        return getHandValue(hand) > 21;
     }
 
     @Override
@@ -376,10 +465,10 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public ACTIONS getNextNondeterministicAction() {
-        if (availableRandoms.isEmpty()) {
+        if (isNextActionDeterministic) {
             return null;
         }
-        return ACTIONS.fromInt(availableRandoms.remove(0));
+        return ACTIONS.fromInt(0);
     }
 
     @Override

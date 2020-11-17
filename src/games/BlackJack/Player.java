@@ -76,6 +76,8 @@ public class Player {
         ArrayList<Card> nHand = new ArrayList<Card>();
         nHand.add(activeHand.remove(1));
         hands.add(nHand);
+        betThisRound[hands.size() - 1] = betThisRound[activeHandIndex];
+        chips -= betThisRound[activeHandIndex];
     }
 
 }
