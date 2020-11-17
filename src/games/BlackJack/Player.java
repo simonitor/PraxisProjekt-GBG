@@ -3,8 +3,8 @@ package games.BlackJack;
 import java.util.ArrayList;
 
 public class Player {
-    ArrayList<ArrayList<Card>> hands = new ArrayList<ArrayList<Card>>();
-    ArrayList<Card> activeHand = new ArrayList<Card>();
+    ArrayList<Hand> hands = new ArrayList<Hand>();
+    Hand activeHand = null;
     private int chips = 1500;
     private int betThisRound[] = new int[24];
     private boolean splitHand = false;
@@ -16,26 +16,28 @@ public class Player {
         this.name = name;
     }
 
-    public ArrayList<Card> getActiveHand() {
+    public Hand getActiveHand() {
         return activeHand;
     }
 
-    public ArrayList<ArrayList<Card>> getHands() {
+    public ArrayList<Hand> getHands() {
         return hands;
     }
 
     public void addCardToActiveHand(Card c) {
-        if (activeHand.isEmpty()) {
+        if (activeHand == null) {
+            activeHand = new Hand(c);
             hands.add(activeHand);
+        } else {
+            activeHand.addCard(c);
         }
-        activeHand.add(c);
     }
 
-    public ArrayList<Card> setNextHandActive() {
+    public Hand setNextHandActive() {
         if (hands.size() < activeHandIndex + 1) {
             return null;
         }
-        return activeHand = hands.get(activeHandIndex);
+        return activeHand = hands.get(++activeHandIndex);
     }
 
     public void bet(int amount) {
@@ -44,7 +46,7 @@ public class Player {
     }
 
     public void clearHand() {
-        activeHand.clear();
+        activeHand = null;
         hands.clear();
         betThisRound = new int[24];
         activeHandIndex = 0;
@@ -71,11 +73,13 @@ public class Player {
         return splitHand;
     }
 
+    public int collect(int chips){
+        return this.chips += chips; 
+    }
+
     public void splitHand() {
         splitHand = true;
-        ArrayList<Card> nHand = new ArrayList<Card>();
-        nHand.add(activeHand.remove(1));
-        hands.add(nHand);
+        hands.add(activeHand.split());
         betThisRound[hands.size() - 1] = betThisRound[activeHandIndex];
         chips -= betThisRound[activeHandIndex];
     }
