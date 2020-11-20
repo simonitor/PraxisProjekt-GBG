@@ -23,11 +23,11 @@ public class Card {
 
     Rank rank;
     Suit suit;
-    int uniqueId;
+    int Id;
 
-    public Card(Rank rank, Suit suit, int uniqueId) {
+    public Card(Rank rank, Suit suit, int Id) {
         this.rank = rank;
         this.suit = suit;
-        this.uniqueId = uniqueId;
+        this.Id = Id;
     }
 }

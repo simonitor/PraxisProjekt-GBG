@@ -5,8 +5,8 @@ import java.util.ArrayList;
 public class Player {
     ArrayList<Hand> hands = new ArrayList<Hand>();
     Hand activeHand = null;
-    private int chips = 1500;
-    private int betThisRound[] = new int[24];
+    private double chips = 1500;
+    private double betThisRound[] = new double[24];
     private boolean splitHand = false;
     private int activeHandIndex = 0;
 
@@ -40,7 +40,7 @@ public class Player {
         return activeHand = hands.get(++activeHandIndex);
     }
 
-    public void bet(int amount) {
+    public void bet(double amount) {
         chips -= amount;
         betThisRound[activeHandIndex] += amount;
     }
@@ -48,7 +48,7 @@ public class Player {
     public void clearHand() {
         activeHand = null;
         hands.clear();
-        betThisRound = new int[24];
+        betThisRound = new double[24];
         activeHandIndex = 0;
         splitHand = false;
     }
@@ -57,15 +57,20 @@ public class Player {
         return name;
     }
 
-    public int betOnActiveHand() {
+    public double betOnActiveHand() {
         return betThisRound[activeHandIndex];
+    }
+
+    public double getBetAmountForHand(Hand h) {
+        int index = hands.indexOf(h);
+        return betThisRound[index];
     }
 
     public boolean hasHand() {
         return !hands.isEmpty();
     }
 
-    public int getChips() {
+    public double getChips() {
         return chips;
     }
 
@@ -73,8 +78,8 @@ public class Player {
         return splitHand;
     }
 
-    public int collect(int chips){
-        return this.chips += chips; 
+    public double collect(double chips) {
+        return this.chips += chips;
     }
 
     public void splitHand() {
