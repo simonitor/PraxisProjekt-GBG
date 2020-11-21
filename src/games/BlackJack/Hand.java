@@ -10,6 +10,11 @@ public class Hand {
         hand.add(c);
     }
 
+    public Hand(Hand other) {
+        this.hand = new ArrayList<>(other.hand);
+        this.isHandFinished = other.isHandFinished;
+    }
+
     public void addCard(Card c) {
         hand.add(c);
     }

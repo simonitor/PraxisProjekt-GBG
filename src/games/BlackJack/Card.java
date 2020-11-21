@@ -12,7 +12,7 @@ public class Card {
 
         private int value;
 
-        Rank(int valuel) {
+        Rank(int value) {
             this.value = value;
         }
 
@@ -29,5 +29,30 @@ public class Card {
         this.rank = rank;
         this.suit = suit;
         this.Id = Id;
+    }
+
+    public String toString() {
+        String rankStr = "";
+        if (rank.value < 10) {
+            rankStr = String.valueOf(rank.value);
+        } else {
+            rankStr = rank.name().substring(0, 1);
+        }
+        String suitStr = "";
+        switch (suit) {
+            case HEART:
+                suitStr = "♥";
+                break;
+            case DIAMOND:
+                suitStr = "♦";
+                break;
+            case CLUB:
+                suitStr = "♣";
+                break;
+            case SPADE:
+                suitStr = "♠";
+                break;
+        }
+        return rankStr + suitStr;
     }
 }

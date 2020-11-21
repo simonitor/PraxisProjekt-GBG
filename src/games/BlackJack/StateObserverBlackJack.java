@@ -15,28 +15,44 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     // be added later.
 
     private static final long serialVersionUID = 1L;
+    private int NUM_PLAYERS = 2;
     private Player p1;
     private ArrayList<Types.ACTIONS> availableActions = new ArrayList<Types.ACTIONS>();
     private Player currentPlayer;
-    private boolean dealersTurn = false;
     private boolean isNextActionDeterministic = false;
     private ArrayList<Integer> availableRandoms = new ArrayList<Integer>();
     private Deck deck = new Deck();
     private Player dealer;
     private Player players[] = new Player[2];
-    private int playersTurn = 0;
+    private int playersTurn;
 
     public StateObserverBlackJack() {
         // defaultState
         // adding dealer and player/s
         dealer = new Player("dealer");
         p1 = new Player("p1");
-        currentPlayer = p1;
+        players[0] = p1;
+        players[1] = dealer;
+        playersTurn = 0;
+        currentPlayer = getCurrentPlayer();
+    }
+
+    public StateObserverBlackJack(StateObserverBlackJack other) {
+        super(other);
+        this.playersTurn = other.playersTurn;
+        this.dealer = new Player(other.dealer);
+        this.p1 = new Player(other.p1);
+        this.availableRandoms = new ArrayList<>(other.availableRandoms);
+        this.availableActions = new ArrayList<>(other.availableActions);
+        this.isNextActionDeterministic = other.isNextActionDeterministic;
+        this.currentPlayer = getCurrentPlayer();
+        this.players[0] = p1;
+        this.players[1] = dealer;
     }
 
     enum BlackJackActionDet {
         BET1(0), BET5(1), BET10(2), BET25(3), BET50(4), BET100(5), HIT(6), STAND(7), DOUBLEDOWN(8), SPLIT(9),
-        INSURANCE(10);
+        SURRENDER(10), INSURANCE(11);
 
         private int action;
 
@@ -95,12 +111,12 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public String stringDescr() {
-        return null;
+        return "null";
     }
 
     @Override
     public String stringActionDescr(ACTIONS act) {
-        return null;
+        return "null";
     }
 
     @Override
@@ -379,7 +395,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     public boolean isDealPhase() {
         // dealers handsize < 2 ?
-        return true;
+        return dealer.getActiveHand().size() < 2;
     }
 
     @Override
@@ -557,7 +573,19 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public StateObsNondeterministic copy() {
-        return null;
+        return new StateObserverBlackJack(this);
+    }
+
+    public Player getCurrentPlayer() {
+        return players[getPlayer()];
+    }
+
+    public Player getDealer() {
+        return dealer;
+    }
+
+    public Player[] getPlayers() {
+        return players;
     }
 
 }

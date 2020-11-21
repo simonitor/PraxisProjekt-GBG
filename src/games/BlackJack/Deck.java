@@ -19,6 +19,14 @@ public class Deck {
         }
     }
 
+    public Deck(Deck other) {
+        this.deck = new ArrayList<>(other.deck);
+    }
+
+    public Deck(ArrayList<Card> deck) {
+        this.deck = deck;
+    }
+
     public int size() {
         return deck.size();
     }
@@ -28,4 +36,5 @@ public class Deck {
         // returns random card between zero and decksize
         return deck.remove(r.ints(0, (size() + 1)).findFirst().getAsInt());
     }
+
 }
