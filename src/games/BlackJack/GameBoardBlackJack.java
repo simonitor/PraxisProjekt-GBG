@@ -4,6 +4,7 @@ import controllers.PlayAgent;
 import games.Arena;
 import games.GameBoard;
 import games.StateObservation;
+import tools.Types;
 
 public class GameBoardBlackJack implements GameBoard {
 
@@ -128,6 +129,14 @@ public class GameBoardBlackJack implements GameBoard {
     public StateObservation chooseStartState() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    public void humanMove(int a) {
+        Types.ACTIONS act = Types.ACTIONS.fromInt(a);
+        System.out.println("trying to perform action :" + a);
+        m_so.advance(act);
+        System.out.println("action :" + a + " performed");
+        arenaActReq = true;
     }
 
 }

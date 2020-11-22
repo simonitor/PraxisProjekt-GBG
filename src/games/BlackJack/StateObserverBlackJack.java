@@ -19,7 +19,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     private Player p1;
     private ArrayList<Types.ACTIONS> availableActions = new ArrayList<Types.ACTIONS>();
     private Player currentPlayer;
-    private boolean isNextActionDeterministic = false;
+    private boolean isNextActionDeterministic = true;
     private ArrayList<Integer> availableRandoms = new ArrayList<Integer>();
     private Deck deck = new Deck();
     private Player dealer;
@@ -35,6 +35,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         players[1] = dealer;
         playersTurn = 0;
         currentPlayer = getCurrentPlayer();
+        setAvailableActions();
     }
 
     public StateObserverBlackJack(StateObserverBlackJack other) {
@@ -86,7 +87,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public boolean isGameOver() {
-        return p1.getChips() == 0;
+        return false;
     }
 
     @Override
@@ -111,12 +112,12 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public String stringDescr() {
-        return "null";
+        return "xyz";
     }
 
     @Override
     public String stringActionDescr(ACTIONS act) {
-        return "null";
+        return BlackJackActionDet.values()[act.toInt()].name();
     }
 
     @Override
@@ -166,7 +167,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public int getMinEpisodeLength() {
-        return 0;
+        return 50;
     }
 
     @Override
@@ -302,6 +303,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         return playersTurn;
     }
 
+    @Override
     public void setPlayer(int p) {
         playersTurn = p;
     }
@@ -313,12 +315,12 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public int getNumPlayers() {
-        return 2;
+        return 1;
     }
 
     @Override
     public void advanceDeterministic(ACTIONS action) {
-
+        currentPlayer = getCurrentPlayer();
         BlackJackActionDet a = BlackJackActionDet.values()[action.toInt()];
         isNextActionDeterministic = true;
         switch (a) {
@@ -381,7 +383,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             case BET100:
             case STAND:
                 isNextActionDeterministic = !isNextPlayerDealer();
-                passToNextPlayer();
+                // passToNextPlayer();
                 break;
             case HIT:
             case DOUBLEDOWN:
@@ -390,17 +392,23 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 break;
 
         }
+        if (isNextActionDeterministic && players[playersTurn].equals(dealer)) {
+            passToNextPlayer();
+        }
 
     }
 
     public boolean isDealPhase() {
         // dealers handsize < 2 ?
+        if (!dealer.hasHand()) {
+            return true;
+        }
         return dealer.getActiveHand().size() < 2;
     }
 
     @Override
     public void advanceNondeterministic() {
-        advanceDeterministic(getNextNondeterministicAction());
+        advanceNondeterministic(getNextNondeterministicAction());
     }
 
     @Override
@@ -412,6 +420,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         switch (a) {
             case DEALCARD:
                 // NonDeterministic part
+                currentPlayer = getCurrentPlayer();
                 currentPlayer.addCardToActiveHand(deck.draw());
 
                 // Consequenses of it
@@ -445,6 +454,9 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                     } else {
                         isNextActionDeterministic = true;
                     }
+                } else {
+                    isNextActionDeterministic = true;
+                    setAvailableActions();
                 }
 
                 break;
@@ -495,6 +507,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 isNextActionDeterministic = true;
                 break;
         }
+
     }
 
     /**

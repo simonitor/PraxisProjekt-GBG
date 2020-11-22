@@ -1,19 +1,35 @@
 package games.BlackJack;
 
+import java.awt.Color;
 import java.awt.Graphics;
 
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 import games.Arena;
 import games.StateObservation;
 import games.BlackJack.StateObserverBlackJack.BlackJackActionDet;
+import params.GridLayout2;
 import tools.Types;
 
 public class GameBoardBlackJackGui extends JFrame {
+
+    class ActionHandler implements ActionListener {
+        int action;
+
+        ActionHandler(int action) {
+            this.action = action;
+        }
+
+        public void actionPerformed(ActionEvent e) {
+        }
+    }
 
     /**
      *
@@ -25,33 +41,47 @@ public class GameBoardBlackJackGui extends JFrame {
     public GameBoardBlackJackGui(GameBoardBlackJack gb) {
         super("BlackJack");
         m_gb = gb;
+        initGui();
     }
 
     JPanel actionZone, dealerZone, playerZone;
 
     public void initGui() {
 
+        JPanel window = new JPanel();
+        window.setLayout(new BoxLayout(window, BoxLayout.X_AXIS));
+
         dealerZone = new JPanel();
         playerZone = new JPanel();
         actionZone = new JPanel();
-        this.add(actionZone);
-        this.add(playerZone);
-        this.add(dealerZone);
+
+        dealerZone.setBackground(new Color(100, 1, 1));
+        playerZone.setBackground(new Color(1, 100, 1));
+        actionZone.setBackground(new Color(1, 1, 100));
+
+        window.add(actionZone);
+        window.add(playerZone);
+        window.add(dealerZone);
 
         m_so = (StateObserverBlackJack) m_gb.getStateObs();
 
         actionZone.add(getActionZone(m_so));
-        playerZone.add(playerPanel(m_so.getCurrentPlayer()));
+        playerZone.add(playerPanel(m_so.getPlayers()[0]));
         dealerZone.add(dealerPanel(m_so.getDealer()));
+        this.add(window);
+        this.setVisible(true);
+        this.repaint();
 
     }
 
     public void update(StateObserverBlackJack so, boolean withReset, boolean showValueOnGameboard) {
         clear();
         actionZone.add(getActionZone(so));
-        playerZone.add(playerPanel(so.getCurrentPlayer()));
+        playerZone.add(playerPanel(so.getPlayers()[0]));
         dealerZone.add(dealerPanel(so.getDealer()));
+        this.setVisible(true);
         this.repaint();
+
     }
 
     public void clear() {
@@ -66,23 +96,35 @@ public class GameBoardBlackJackGui extends JFrame {
 
     public JPanel getActionZone(StateObserverBlackJack so) {
         JPanel p = new JPanel();
-        for (Types.ACTIONS a : so.getAllAvailableActions()) {
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        for (Types.ACTIONS a : so.getAvailableActions()) {
             String nameOfAction = BlackJackActionDet.values()[a.toInt()].name();
-            p.add(new JButton(nameOfAction));
+            JButton buttonToAdd = new JButton(nameOfAction);
+            buttonToAdd.addActionListener(new ActionHandler(a.toInt()) {
+                public void actionPerformed(ActionEvent e) {
+                    m_gb.humanMove(action);
+                }
+            });
+            // buttonToAdd.setEnabled(true);
+            p.add(buttonToAdd);
         }
         return p;
     }
 
     public JPanel getHandPanel(Hand h) {
         JPanel handPanel = new JPanel();
-        for (Card c : h.getCards()) {
-            handPanel.add(getCard(c));
+        handPanel.add(new JLabel("Hand: "));
+        if (h != null) {
+            for (Card c : h.getCards()) {
+                handPanel.add(getCard(c));
+            }
         }
         return handPanel;
     }
 
     public JPanel playerPanel(Player p) {
         JPanel playerPanel = new JPanel();
+        playerPanel.setLayout(new BoxLayout(playerPanel, BoxLayout.Y_AXIS));
         playerPanel.add(new JLabel(p.name));
         playerPanel.add(new JLabel("chips: " + p.getChips()));
         for (Hand h : p.getHands()) {
@@ -93,8 +135,11 @@ public class GameBoardBlackJackGui extends JFrame {
 
     public JPanel dealerPanel(Player dealer) {
         JPanel dealerPanel = new JPanel();
+        dealerPanel.setLayout(new BoxLayout(dealerPanel, BoxLayout.Y_AXIS));
         dealerPanel.add(new JLabel("Dealer"));
-        dealerPanel.add(getHandPanel(dealer.getActiveHand()));
+        if (dealer.getActiveHand() != null) {
+            dealerPanel.add(getHandPanel(dealer.getActiveHand()));
+        }
         return dealerPanel;
     }
 
@@ -107,7 +152,7 @@ public class GameBoardBlackJackGui extends JFrame {
             if (arena.m_ArenaFrame != null) {
                 x = arena.m_ArenaFrame.getX();
                 y = arena.m_ArenaFrame.getY() + arena.m_ArenaFrame.getHeight() + 1;
-                this.setSize(1500, 1500);
+                this.setSize(1500, 800);
             }
             this.setLocation(x, y);
         }

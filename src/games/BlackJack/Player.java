@@ -21,7 +21,10 @@ public class Player {
         for (Hand a : other.hands) {
             this.hands.add(new Hand(a));
         }
-        this.activeHand = new Hand(other.activeHand);
+        if (other.activeHand != null) {
+            this.activeHand = new Hand(other.activeHand);
+        }
+        this.name = other.name;
         this.chips = other.chips;
         this.splitHand = other.splitHand;
         this.activeHandIndex = other.activeHandIndex;
