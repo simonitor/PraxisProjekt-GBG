@@ -402,84 +402,6 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             setAvailableActions();
 
     }
-    // feststellen ob next act det
-    // feststellen ob an naechsten spieler weiter
-    // tracken ob jeder spieler dran war in der phase -> phase anpassen
-
-    // switch (a) {
-    // case BET1:
-    // currentPlayer.bet(1);
-    // break;
-    // case BET5:
-    // currentPlayer.bet(5);
-    // break;
-    // case BET10:
-    // currentPlayer.bet(10);
-    // break;
-    // case BET25:
-    // currentPlayer.bet(25);
-    // break;
-    // case BET50:
-    // currentPlayer.bet(50);
-    // break;
-    // case BET100:
-    // currentPlayer.bet(100);
-    // break;
-    // case STAND:
-    // // assign next player, currently there is only one so its the dealers turn
-    // break;
-    // case HIT:
-    // // The player wants another card, this should be a nondetermenistic Event
-    // // isNextActionDeterministic = false;
-    // // nondeterministicAdvance Deal card to player??
-    // // check if he is bust
-    // break;
-    // case DOUBLEDOWN:
-    // // double his bet
-    // currentPlayer.bet(currentPlayer.betOnActiveHand());
-    // // he will get exactly one more card dealt
-    // // isNextActionDeterministic = false;
-    // // nondeterministicAdvance Deal card to player??
-    // break;
-    // case SPLIT:
-    // currentPlayer.splitHand();
-    // // Der Spieler Spielt nun zwei Haende, seine erste Hand braucht eine weitere
-    // // Karte -> Nondeterministisches Event
-    // // nachdem er seine 1. Hand fertig gespielt hat braucht seine 2. Hand eine
-    // Karte
-    // // -> Nondeterministisches Event
-    // // Wann ist eine Hand fertig? Wenn ein Blackjack oder 21 erreicht wurde, bei
-    // // Stand und einem Bust der bei jedem
-    // // DOUBLEDOWN und HIT auftreten kann.
-    // // Eine Gesplittete Hand erneut zu splitten ist vorerst nicht moeglich und in
-    // je
-    // // nach Regeln auch verboten
-    // // Wenn Asse gesplittet werden kann je nach Hausregeln nur eine Weitere Karte
-    // // pro Hand genommen werden
-    // break;
-    // // case INSURANCE: break;
-    // }
-    // switch (a) {
-    // case BET1:
-    // case BET5:
-    // case BET10:
-    // case BET25:
-    // case BET50:
-    // case BET100:
-    // case STAND:
-    // isNextActionDeterministic = !isNextPlayerDealer();
-    // // passToNextPlayer();
-    // break;
-    // case HIT:
-    // case DOUBLEDOWN:
-    // case SPLIT:
-    // isNextActionDeterministic = false;
-    // break;
-
-    // }
-    // if (isNextActionDeterministic && players[playersTurn].equals(dealer)) {
-    // passToNextPlayer();
-    // }
 
     public void setAvailableRandoms() {
         availableRandoms.clear();
@@ -595,45 +517,39 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 break;
             case PAYPLAYERS:
                 for (Player p : players) {
-                    for (Hand h : p.getHands()) { // iterating over each players hands
-                        if (h.checkForBlackJack()) { // Player has a blackjack
-                            if (dealer.getActiveHand().checkForBlackJack()) { // dealer has blackjack as well
-                                p.collect(p.getBetAmountForHand(h)); // push Player gets his bet back
-                                System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " handvalue: "
-                                        + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
-                                        + p.getActiveHand() + " handvalue: " + dealer.getActiveHand().getHandValue()
-                                        + " push!");
-                            } else { // only the player has a blackjack and gets payed 3 to 2
-                                p.collect(p.getBetAmountForHand(h) * 2.5);
-                                System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " handvalue: "
-                                        + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
-                                        + " playerwins with blackjack");
+                    for (Hand h : p.getHands()) {
+                        // case blackjack
+                        double amountToCollect = 0;
+                        double bet = p.getBetAmountForHand(h);
+                        if (h.checkForBlackJack()) { // player has blackjack
+                            if (!dealer.getActiveHand().checkForBlackJack()) { // dealer has no blackjack
+                                amountToCollect = bet * 2.5;
+                            } // both have blackjack push/draw player gets bet back
+                            amountToCollect = bet;
+                        } else { // player has no blackjack
+                            if (!h.isBust()) { // player not bust
+                                if (dealer.getActiveHand().isBust()) {// dealer is bust player not
+                                    amountToCollect = bet * 2;
+                                } else {// both not bust
+                                    if (h.getHandValue() > dealer.getActiveHand().getHandValue()) { // player wins
+                                        amountToCollect = bet * 2;
+                                    } else if (h.getHandValue() == dealer.getActiveHand().getHandValue()) { // push/draw
+                                                                                                            // player
+                                                                                                            // gets his
+                                                                                                            // bet back
+                                        amountToCollect = bet;
+                                    }
+                                }
                             }
-                        } else if (h.getHandValue() <= 21) { // notbust
-                            if (p.getActiveHand().getHandValue() > dealer.getActiveHand().getHandValue()) {
-                                // if player wins against dealer
-                                p.collect(p.getBetAmountForHand(h) * 2);
-                                System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " handvalue: "
-                                        + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
-                                        + " handvalue: " + dealer.getActiveHand().getHandValue() + " playerwins");
-                            } else if (p.getActiveHand().getHandValue() == dealer.getActiveHand().getHandValue()) { // push
-                                System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " vs dealer: "
-                                        + dealer.getActiveHand() + " handvalue: "
-                                        + dealer.getActiveHand().getHandValue() + " push!");
-                                p.collect(p.getBetAmountForHand(h));
-                            } else {
-                                System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " handvalue: "
-                                        + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
-                                        + " handvalue: " + dealer.getActiveHand().getHandValue() + " player loses");
-                            }
-                        } else {
-                            System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " handvalue: "
-                                    + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
-                                    + " handvalue: " + dealer.getActiveHand().getHandValue() + " player loses");
                         }
-
+                        p.collect(amountToCollect);
+                        System.out.println("player : " + p + " with hand: " + p.getActiveHand() + "handvalue: "
+                                + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
+                                + " handvalue: " + dealer.getActiveHand().getHandValue() + " collected: "
+                                + amountToCollect + " chips");
                     }
                 }
+
                 // Setup new Round
                 for (Player p : players) {
                     p.clearHand();
@@ -647,20 +563,6 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         if (isNextActionDeterministic)
             setAvailableActions();
     }
-
-    /**
-     * 
-     * 
-     * 
-     * Logik: If(dealphase){ passToNext; deterministic = False; }
-     * 
-     * else if( playersTurn && handsize > 2){ switch(lastAction) case HIt,
-     * DoubleDown, Split: check HandFinished = true oder false if (isHandFinished) {
-     * // check for more hands if (currentPlayer.setNextHandActive() != null) { //
-     * There are more hands isNextActionDeterministic = false; return; } else {
-     * isNextActionDeterministic = true; passToNextPlayer(); } }else
-     * isNextActionDeterministic = true }
-     */
 
     public boolean checkForBlackJack(ArrayList<Card> hand) {
         return hand.get(0).rank.getValue() + hand.get(1).rank.getValue() == 21 && hand.size() == 2;
