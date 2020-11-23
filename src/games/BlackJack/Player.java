@@ -17,13 +17,18 @@ public class Player {
     }
 
     public Player(Player other) {
-
-        for (Hand a : other.hands) {
-            this.hands.add(new Hand(a));
-        }
         if (other.activeHand != null) {
             this.activeHand = new Hand(other.activeHand);
+            int count = 0;
+            for (Hand a : other.hands) {
+                if (count++ == other.activeHandIndex) {
+                    this.hands.add(this.activeHand);
+                } else {
+                    this.hands.add(new Hand(a));
+                }
+            }
         }
+
         this.name = other.name;
         this.chips = other.chips;
         this.splitHand = other.splitHand;
@@ -49,7 +54,7 @@ public class Player {
     }
 
     public Hand setNextHandActive() {
-        if (hands.size() < activeHandIndex + 1) {
+        if (hands.size() <= activeHandIndex + 1) {
             return null;
         }
         return activeHand = hands.get(++activeHandIndex);

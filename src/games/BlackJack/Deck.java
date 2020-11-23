@@ -34,7 +34,7 @@ public class Deck {
     public Card draw() {
         Random r = new Random();
         // returns random card between zero and decksize
-        return deck.remove(r.ints(0, (size() + 1)).findFirst().getAsInt());
+        return deck.remove(r.ints(0, (size() + 1 - 1)).findFirst().getAsInt());
     }
 
 }

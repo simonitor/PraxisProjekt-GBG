@@ -2,6 +2,27 @@
     "configurations": [
         {
             "type": "java",
+            "name": "CodeLens (Launch) - ArenaBlackJack",
+            "request": "launch",
+            "mainClass": "games.BlackJack.ArenaBlackJack",
+            "projectName": "GBG_15b047ce"
+        },
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - ArenaTrainTTT",
+            "request": "launch",
+            "mainClass": "games.TicTacToe.ArenaTrainTTT",
+            "projectName": "GBG_15b047ce"
+        },
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - ArenaTTT",
+            "request": "launch",
+            "mainClass": "games.TicTacToe.ArenaTTT",
+            "projectName": "GBG_15b047ce"
+        },
+        {
+            "type": "java",
             "name": "CodeLens (Launch) - GBGLaunch",
             "request": "launch",
             "mainClass": "games.GBGLaunch"

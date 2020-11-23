@@ -51,7 +51,7 @@ public class Hand {
             if (c.rank.equals(Card.Rank.ACE)) {
                 aces++;
             }
-            result = c.rank.getValue();
+            result += c.rank.getValue();
         }
         for (int i = 0; i < aces; i++) {
             if (result > 21) {
@@ -63,5 +63,13 @@ public class Hand {
 
     public boolean isBust() {
         return getHandValue() > 21;
+    }
+
+    public String toString() {
+        String result = "";
+        for (Card c : hand) {
+            result += c + " ";
+        }
+        return result;
     }
 }

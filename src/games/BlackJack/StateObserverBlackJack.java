@@ -15,7 +15,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     // be added later.
 
     private static final long serialVersionUID = 1L;
-    private int NUM_PLAYERS = 2;
+    private int NUM_PLAYERS = 1;
     private Player p1;
     private ArrayList<Types.ACTIONS> availableActions = new ArrayList<Types.ACTIONS>();
     private Player currentPlayer;
@@ -23,8 +23,10 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     private ArrayList<Integer> availableRandoms = new ArrayList<Integer>();
     private Deck deck = new Deck();
     private Player dealer;
-    private Player players[] = new Player[2];
+    private Player players[] = new Player[1];
     private int playersTurn;
+    private gamePhase gPhase = gamePhase.BETPHASE;
+    private boolean playerActedInPhase[] = new boolean[NUM_PLAYERS];
 
     public StateObserverBlackJack() {
         // defaultState
@@ -32,7 +34,6 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         dealer = new Player("dealer");
         p1 = new Player("p1");
         players[0] = p1;
-        players[1] = dealer;
         playersTurn = 0;
         currentPlayer = getCurrentPlayer();
         setAvailableActions();
@@ -48,7 +49,8 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         this.isNextActionDeterministic = other.isNextActionDeterministic;
         this.currentPlayer = getCurrentPlayer();
         this.players[0] = p1;
-        this.players[1] = dealer;
+        this.gPhase = other.gPhase;
+        this.playerActedInPhase = other.playerActedInPhase.clone();
     }
 
     enum BlackJackActionDet {
@@ -67,7 +69,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     }
 
     enum BlackJackActionNonDet {
-        DEALCARD(0), DEALERPLAYS(1), PAYPLAYERS(2);
+        DEALCARD(12), DEALERPLAYS(13), PAYPLAYERS(14);
 
         private int action;
 
@@ -77,6 +79,24 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
         public int getAction() {
             return this.action;
+        }
+    }
+
+    enum gamePhase {
+        BETPHASE(0), DEALPHASE(1), PLAYERONACTION(2), DEALERONACTION(3), PAYOUT(4);
+
+        private int phase;
+
+        private gamePhase(int phase) {
+            this.phase = phase;
+        }
+
+        public int getPhase() {
+            return this.phase;
+        }
+
+        public gamePhase getNext() {
+            return gamePhase.values()[(phase + 1) % gamePhase.values().length];
         }
     }
 
@@ -223,8 +243,8 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     @Override
     public void setAvailableActions() {
         availableActions.clear();
-
-        if (!currentPlayer.hasHand()) {
+        currentPlayer = getCurrentPlayer();
+        if (gPhase.equals(gamePhase.BETPHASE)) {
             // sets the available betting options, u always bet before get dealt a hand.
             // Checks
             // the highest possible betamount first. Actions are mapped to Enums.
@@ -248,32 +268,34 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-        } else if (!currentPlayer.getActiveHand().isHandFinished()) {
-            // enters after Player has placed his bet
-            // assuming this is only entered if u are not bust and u got no BlackJack nor 21
-            // this should be detected somewher else
+        } else if (gPhase.equals(gamePhase.PLAYERONACTION)) {
+            if (!currentPlayer.getActiveHand().isHandFinished()) {
+                // enters after Player has placed his bet
+                // assuming this is only entered if u are not bust and u got no BlackJack nor 21
+                // this should be detected somewher else
 
-            // Stand - Player wants no more cards for this hand
-            availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.STAND.getAction()));
-            // Hit - Player wants one more card for this Hand
-            availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.HIT.getAction()));
-            // Split - Player wants to split a pair -
-            // Condition: (Handsize == 2) and both cards are from
-            // the same Rank e.g. 8 8, player has enough chips to do so
-            ArrayList<Card> playersHand = currentPlayer.getActiveHand().getCards();
-            if (playersHand.size() == 2 && playersHand.get(0).rank.equals(playersHand.get(1).rank)
-                    && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
-                availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.SPLIT.getAction()));
+                // Stand - Player wants no more cards for this hand
+                availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.STAND.getAction()));
+                // Hit - Player wants one more card for this Hand
+                availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.HIT.getAction()));
+                // Split - Player wants to split a pair -
+                // Condition: (Handsize == 2) and both cards are from
+                // the same Rank e.g. 8 8, player has enough chips to do so
+                ArrayList<Card> playersHand = currentPlayer.getActiveHand().getCards();
+                if (playersHand.size() == 2 && playersHand.get(0).rank.equals(playersHand.get(1).rank)
+                        && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
+                    availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.SPLIT.getAction()));
+                }
+                // Doubledown - Player gets dealt exactly one more card and doubles the
+                // betamount for this hand
+                // Condition: Handsize == 2, player has enough chips to do so
+                if (playersHand.size() == 2 && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
+                    availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.DOUBLEDOWN.getAction()));
+                }
+                // TODO: Insurance
+            } else { // The hand is finished, the player can only stand/passToNext
+                availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.STAND.getAction()));
             }
-            // Doubledown - Player gets dealt exactly one more card and doubles the
-            // betamount for this hand
-            // Condition: Handsize == 2, player has enough chips to do so
-            if (playersHand.size() == 2 && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
-                availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.DOUBLEDOWN.getAction()));
-            }
-            // TODO: Insurance
-        } else { // The hand is finished, the player can only stand/passToNext
-            availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.STAND.getAction()));
         }
 
     }
@@ -315,14 +337,16 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public int getNumPlayers() {
-        return 1;
+        return NUM_PLAYERS;
     }
 
     @Override
     public void advanceDeterministic(ACTIONS action) {
         currentPlayer = getCurrentPlayer();
         BlackJackActionDet a = BlackJackActionDet.values()[action.toInt()];
+        addToLastMoves(action);
         isNextActionDeterministic = true;
+
         switch (a) {
             case BET1:
                 currentPlayer.bet(1);
@@ -342,38 +366,16 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             case BET100:
                 currentPlayer.bet(100);
                 break;
-            case STAND:
-                // assign next player, currently there is only one so its the dealers turn
-                break;
-            case HIT:
-                // The player wants another card, this should be a nondetermenistic Event
-                // isNextActionDeterministic = false;
-                // nondeterministicAdvance Deal card to player??
-                // check if he is bust
-                break;
             case DOUBLEDOWN:
-                // double his bet
                 currentPlayer.bet(currentPlayer.betOnActiveHand());
-                // he will get exactly one more card dealt
-                // isNextActionDeterministic = false;
-                // nondeterministicAdvance Deal card to player??
                 break;
             case SPLIT:
                 currentPlayer.splitHand();
-                // Der Spieler Spielt nun zwei Haende, seine erste Hand braucht eine weitere
-                // Karte -> Nondeterministisches Event
-                // nachdem er seine 1. Hand fertig gespielt hat braucht seine 2. Hand eine Karte
-                // -> Nondeterministisches Event
-                // Wann ist eine Hand fertig? Wenn ein Blackjack oder 21 erreicht wurde, bei
-                // Stand und einem Bust der bei jedem
-                // DOUBLEDOWN und HIT auftreten kann.
-                // Eine Gesplittete Hand erneut zu splitten ist vorerst nicht moeglich und in je
-                // nach Regeln auch verboten
-                // Wenn Asse gesplittet werden kann je nach Hausregeln nur eine Weitere Karte
-                // pro Hand genommen werden
                 break;
-            // case INSURANCE: break;
+            default:
+                break;
         }
+
         switch (a) {
             case BET1:
             case BET5:
@@ -382,20 +384,124 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             case BET50:
             case BET100:
             case STAND:
-                isNextActionDeterministic = !isNextPlayerDealer();
-                // passToNextPlayer();
+                passToNextPlayer();
+                isNextActionDeterministic = !everyPlayerActed(); // immer false für 1 spieler
+                if (everyPlayerActed()) {
+                    advancePhase();
+                }
                 break;
             case HIT:
             case DOUBLEDOWN:
             case SPLIT:
                 isNextActionDeterministic = false;
                 break;
-
+            default:
+                break;
         }
-        if (isNextActionDeterministic && players[playersTurn].equals(dealer)) {
-            passToNextPlayer();
+        if (isNextActionDeterministic)
+            setAvailableActions();
+
+    }
+    // feststellen ob next act det
+    // feststellen ob an naechsten spieler weiter
+    // tracken ob jeder spieler dran war in der phase -> phase anpassen
+
+    // switch (a) {
+    // case BET1:
+    // currentPlayer.bet(1);
+    // break;
+    // case BET5:
+    // currentPlayer.bet(5);
+    // break;
+    // case BET10:
+    // currentPlayer.bet(10);
+    // break;
+    // case BET25:
+    // currentPlayer.bet(25);
+    // break;
+    // case BET50:
+    // currentPlayer.bet(50);
+    // break;
+    // case BET100:
+    // currentPlayer.bet(100);
+    // break;
+    // case STAND:
+    // // assign next player, currently there is only one so its the dealers turn
+    // break;
+    // case HIT:
+    // // The player wants another card, this should be a nondetermenistic Event
+    // // isNextActionDeterministic = false;
+    // // nondeterministicAdvance Deal card to player??
+    // // check if he is bust
+    // break;
+    // case DOUBLEDOWN:
+    // // double his bet
+    // currentPlayer.bet(currentPlayer.betOnActiveHand());
+    // // he will get exactly one more card dealt
+    // // isNextActionDeterministic = false;
+    // // nondeterministicAdvance Deal card to player??
+    // break;
+    // case SPLIT:
+    // currentPlayer.splitHand();
+    // // Der Spieler Spielt nun zwei Haende, seine erste Hand braucht eine weitere
+    // // Karte -> Nondeterministisches Event
+    // // nachdem er seine 1. Hand fertig gespielt hat braucht seine 2. Hand eine
+    // Karte
+    // // -> Nondeterministisches Event
+    // // Wann ist eine Hand fertig? Wenn ein Blackjack oder 21 erreicht wurde, bei
+    // // Stand und einem Bust der bei jedem
+    // // DOUBLEDOWN und HIT auftreten kann.
+    // // Eine Gesplittete Hand erneut zu splitten ist vorerst nicht moeglich und in
+    // je
+    // // nach Regeln auch verboten
+    // // Wenn Asse gesplittet werden kann je nach Hausregeln nur eine Weitere Karte
+    // // pro Hand genommen werden
+    // break;
+    // // case INSURANCE: break;
+    // }
+    // switch (a) {
+    // case BET1:
+    // case BET5:
+    // case BET10:
+    // case BET25:
+    // case BET50:
+    // case BET100:
+    // case STAND:
+    // isNextActionDeterministic = !isNextPlayerDealer();
+    // // passToNextPlayer();
+    // break;
+    // case HIT:
+    // case DOUBLEDOWN:
+    // case SPLIT:
+    // isNextActionDeterministic = false;
+    // break;
+
+    // }
+    // if (isNextActionDeterministic && players[playersTurn].equals(dealer)) {
+    // passToNextPlayer();
+    // }
+
+    public void setAvailableRandoms() {
+        availableRandoms.clear();
+        switch (gPhase) {
+            case DEALPHASE:
+            case PLAYERONACTION:
+                availableRandoms.add(BlackJackActionNonDet.DEALCARD.getAction());
+                break;
+            case DEALERONACTION:
+                availableRandoms.add(BlackJackActionNonDet.DEALERPLAYS.getAction());
+                break;
+            case PAYOUT:
+                availableRandoms.add(BlackJackActionNonDet.PAYPLAYERS.getAction());
+                break;
         }
 
+    }
+
+    public void advancePhase() {
+        gPhase = gPhase.getNext();
+        playerActedInPhase = new boolean[NUM_PLAYERS];
+        setPlayer(0);
     }
 
     public boolean isDealPhase() {
@@ -416,98 +522,130 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         if (isNextActionDeterministic) {
             throw new RuntimeException("Next action should be deterministic");
         }
-        BlackJackActionNonDet a = BlackJackActionNonDet.values()[action.toInt()];
+        BlackJackActionNonDet a = BlackJackActionNonDet.values()[action.toInt() % 3];
+
+        // feststellen ob next act det
+        // feststellen ob an naechsten spieler weiter
+        // tracken ob jeder spieler dran war in der phase -> phase anpassen
+
         switch (a) {
             case DEALCARD:
-                // NonDeterministic part
                 currentPlayer = getCurrentPlayer();
-                currentPlayer.addCardToActiveHand(deck.draw());
+                switch (gPhase) {
 
-                // Consequenses of it
-                if (isDealPhase()) {
-                    passToNextPlayer();
-                    isNextActionDeterministic = false;
-                } else if (!currentPlayer.equals(dealer)) {
-                    Hand currentHand = currentPlayer.getActiveHand();
-                    BlackJackActionDet lastAction = BlackJackActionDet.values()[getLastMove()];
-                    switch (lastAction) {
-                        case DOUBLEDOWN: // Double down is the only case, where the hand ends for sure after
-                            // an nondeterministic event. After a Hit the hand will only end, if he got a
-                            // blackjack, 21, or handvalue > 21
-                            currentHand.setHandFinished();
-                            break;
-                    }
-                    if (currentHand.isHandFinished()) { // is handfinished checks for blackjack, handvalue > 20, or if
-                                                        // the
-                                                        // hand is finished by decision
-                        // check for more hands
-                        if (currentPlayer.setNextHandActive() != null) {
-                            // The player has more hands this will only occure if a hand is split
-                            // so the handsize of it is 1 -> the hand needs to get dealt one more card so
-                            // the next advance is nonDet
-                            isNextActionDeterministic = false;
+                    case DEALPHASE:
+                        if (everyPlayerActed()) {
+                            dealer.addCardToActiveHand(deck.draw());
+                            playerActedInPhase = new boolean[NUM_PLAYERS];
+                            if (dealer.getActiveHand().size() == 2) {
+                                advancePhase();
+                                isNextActionDeterministic = true;
+                            }
                         } else {
-                            // The players hand is finished and he has no more Hands
-                            isNextActionDeterministic = true;
+                            currentPlayer.addCardToActiveHand(deck.draw());
                             passToNextPlayer();
+                            isNextActionDeterministic = false;
                         }
-                    } else {
-                        isNextActionDeterministic = true;
-                    }
-                } else {
-                    isNextActionDeterministic = true;
-                    setAvailableActions();
+                        break;
+
+                    case PLAYERONACTION:
+                        Hand currentHand = currentPlayer.getActiveHand();
+                        int f = getLastMove();
+                        Types.ACTIONS i = Types.ACTIONS.fromInt(f);
+                        BlackJackActionDet lastAction = BlackJackActionDet.values()[i.toInt()];
+                        currentHand.addCard(deck.draw());
+                        switch (lastAction) {
+                            case DOUBLEDOWN:
+                                currentHand.setHandFinished();
+                                break;
+                        }
+
+                        if (currentHand.isHandFinished()) {
+                            if (currentPlayer.setNextHandActive() != null) {
+                                isNextActionDeterministic = false;
+                            } else {
+                                passToNextPlayer();
+                                isNextActionDeterministic = true;
+                                if (everyPlayerActed()) {
+                                    advancePhase();
+                                    isNextActionDeterministic = false;
+                                }
+                            }
+                        } else {
+                            isNextActionDeterministic = true;
+                        }
+                        break;
+
+                    default:
+                        System.out.print("ärror xD");
+                        break;
+
                 }
 
                 break;
-
             case DEALERPLAYS:
-                // reveal unknown card ??
-                while (currentPlayer.getActiveHand().getHandValue() < 17) {
+                while (dealer.getActiveHand().getHandValue() < 17) {
                     // The dealer will always hit under 17 and will always stay on 17 or higher,
                     // even if the opponent got 18, dealer got 17 and there is only this one
                     // opponent
-                    currentPlayer.activeHand.addCard(deck.draw());
+                    dealer.activeHand.addCard(deck.draw());
                 }
-
-                // next action will be nondeterministic, the envoirement will check who won
-                // against the dealer and will pay them according to there bets
+                advancePhase();
                 isNextActionDeterministic = false;
-                availableRandoms.clear();
-                availableRandoms.add(BlackJackActionNonDet.PAYPLAYERS.getAction());
-
                 break;
-            case PAYPLAYERS: // this logic can prob be simplified later check first if the dealer is bust
+            case PAYPLAYERS:
                 for (Player p : players) {
-                    if (!p.equals(dealer)) {
-                        for (Hand h : p.getHands()) { // iterating over each players hands
-                            if (h.checkForBlackJack()) { // Player has a blackjack
-                                if (dealer.getActiveHand().checkForBlackJack()) { // dealer has blackjack as well
-                                    p.collect(p.getBetAmountForHand(h)); // push Player gets his bet back
-                                } else { // only the player has a blackjack and gets payed 3 to 2
-                                    p.collect(p.getBetAmountForHand(h) * 2.5);
-                                }
-                            } else if (!h.isBust()) { // notbust
-                                if (p.getActiveHand().getHandValue() > dealer.getActiveHand().getHandValue()) {
-                                    // if player wins against dealer
-                                    p.collect(p.getBetAmountForHand(h) * 2);
-                                } else if (p.getActiveHand().getHandValue() == dealer.getActiveHand().getHandValue()) { // push
-                                    p.collect(p.getBetAmountForHand(h));
-                                }
+                    for (Hand h : p.getHands()) { // iterating over each players hands
+                        if (h.checkForBlackJack()) { // Player has a blackjack
+                            if (dealer.getActiveHand().checkForBlackJack()) { // dealer has blackjack as well
+                                p.collect(p.getBetAmountForHand(h)); // push Player gets his bet back
+                                System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " handvalue: "
+                                        + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
+                                        + p.getActiveHand() + " handvalue: " + dealer.getActiveHand().getHandValue()
+                                        + " push!");
+                            } else { // only the player has a blackjack and gets payed 3 to 2
+                                p.collect(p.getBetAmountForHand(h) * 2.5);
+                                System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " handvalue: "
+                                        + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
+                                        + " playerwins with blackjack");
                             }
+                        } else if (h.getHandValue() <= 21) { // notbust
+                            if (p.getActiveHand().getHandValue() > dealer.getActiveHand().getHandValue()) {
+                                // if player wins against dealer
+                                p.collect(p.getBetAmountForHand(h) * 2);
+                                System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " handvalue: "
+                                        + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
+                                        + " handvalue: " + dealer.getActiveHand().getHandValue() + " playerwins");
+                            } else if (p.getActiveHand().getHandValue() == dealer.getActiveHand().getHandValue()) { // push
+                                System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " vs dealer: "
+                                        + dealer.getActiveHand() + " handvalue: "
+                                        + dealer.getActiveHand().getHandValue() + " push!");
+                                p.collect(p.getBetAmountForHand(h));
+                            } else {
+                                System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " handvalue: "
+                                        + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
+                                        + " handvalue: " + dealer.getActiveHand().getHandValue() + " player loses");
+                            }
+                        } else {
+                            System.out.println("player : " + p + " with hand: " + p.getActiveHand() + " handvalue: "
+                                    + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
+                                    + " handvalue: " + dealer.getActiveHand().getHandValue() + " player loses");
                         }
+
                     }
                 }
-
                 // Setup new Round
                 for (Player p : players) {
                     p.clearHand();
                 }
-                playersTurn = 0;
+                dealer.clearHand();
+                advancePhase();
                 isNextActionDeterministic = true;
+                setAvailableActions();
                 break;
         }
-
+        if (isNextActionDeterministic)
+            setAvailableActions();
     }
 
     /**
@@ -565,7 +703,8 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         if (isNextActionDeterministic) {
             return null;
         }
-        return ACTIONS.fromInt(0);
+        setAvailableRandoms();
+        return Types.ACTIONS.fromInt(availableRandoms.remove(0));
     }
 
     @Override
@@ -599,6 +738,21 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     public Player[] getPlayers() {
         return players;
+    }
+
+    @Override
+    public void passToNextPlayer() {
+        playerActedInPhase[getPlayer()] = true;
+        setPlayer(getNextPlayer());
+    }
+
+    public boolean everyPlayerActed() {
+        for (boolean a : playerActedInPhase) {
+            if (!a) {
+                return false;
+            }
+        }
+        return true;
     }
 
 }

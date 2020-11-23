@@ -127,9 +127,12 @@ public class GameBoardBlackJackGui extends JFrame {
         playerPanel.setLayout(new BoxLayout(playerPanel, BoxLayout.Y_AXIS));
         playerPanel.add(new JLabel(p.name));
         playerPanel.add(new JLabel("chips: " + p.getChips()));
-        for (Hand h : p.getHands()) {
-            playerPanel.add(getHandPanel(h));
+        if (p.getActiveHand() != null) {
+            playerPanel.add(getHandPanel(p.getActiveHand()));
         }
+        // for (Hand h : p.getHands()) {
+        // playerPanel.add(getHandPanel(h));
+        // }
         return playerPanel;
     }
 
