@@ -27,6 +27,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     private int playersTurn;
     private gamePhase gPhase = gamePhase.BETPHASE;
     private boolean playerActedInPhase[] = new boolean[NUM_PLAYERS];
+    private ArrayList<String> handHistory = new ArrayList<String>();
 
     public StateObserverBlackJack() {
         // defaultState
@@ -51,6 +52,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         this.players[0] = p1;
         this.gPhase = other.gPhase;
         this.playerActedInPhase = other.playerActedInPhase.clone();
+        this.handHistory = new ArrayList<>(other.handHistory);
     }
 
     enum BlackJackActionDet {
@@ -69,7 +71,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     }
 
     enum BlackJackActionNonDet {
-        DEALCARD(12), DEALERPLAYS(13), PAYPLAYERS(14);
+        DEALCARD(0), DEALERPLAYS(1), PAYPLAYERS(2);
 
         private int action;
 
@@ -384,10 +386,14 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             case BET50:
             case BET100:
             case STAND:
-                passToNextPlayer();
-                isNextActionDeterministic = !everyPlayerActed(); // immer false für 1 spieler
-                if (everyPlayerActed()) {
-                    advancePhase();
+                if (currentPlayer.setNextHandActive() != null) {
+                    isNextActionDeterministic = false;
+                } else {
+                    passToNextPlayer();
+                    isNextActionDeterministic = !everyPlayerActed(); // immer false für 1 spieler
+                    if (everyPlayerActed()) {
+                        advancePhase();
+                    }
                 }
                 break;
             case HIT:
@@ -398,8 +404,9 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             default:
                 break;
         }
-        if (isNextActionDeterministic)
+        if (isNextActionDeterministic) {
             setAvailableActions();
+        }
 
     }
 
@@ -415,6 +422,8 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 break;
             case PAYOUT:
                 availableRandoms.add(BlackJackActionNonDet.PAYPLAYERS.getAction());
+                break;
+            default:
                 break;
         }
 
@@ -444,7 +453,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         if (isNextActionDeterministic) {
             throw new RuntimeException("Next action should be deterministic");
         }
-        BlackJackActionNonDet a = BlackJackActionNonDet.values()[action.toInt() % 3];
+        BlackJackActionNonDet a = BlackJackActionNonDet.values()[action.toInt()];
 
         // feststellen ob next act det
         // feststellen ob an naechsten spieler weiter
@@ -522,10 +531,10 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                         double amountToCollect = 0;
                         double bet = p.getBetAmountForHand(h);
                         if (h.checkForBlackJack()) { // player has blackjack
+                            amountToCollect = bet; // both have blackjack push/draw player gets bet back
                             if (!dealer.getActiveHand().checkForBlackJack()) { // dealer has no blackjack
                                 amountToCollect = bet * 2.5;
-                            } // both have blackjack push/draw player gets bet back
-                            amountToCollect = bet;
+                            }
                         } else { // player has no blackjack
                             if (!h.isBust()) { // player not bust
                                 if (dealer.getActiveHand().isBust()) {// dealer is bust player not
@@ -543,10 +552,9 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                             }
                         }
                         p.collect(amountToCollect);
-                        System.out.println("player : " + p + " with hand: " + p.getActiveHand() + "handvalue: "
-                                + p.getActiveHand().getHandValue() + " vs dealer: " + dealer.getActiveHand()
-                                + " handvalue: " + dealer.getActiveHand().getHandValue() + " collected: "
-                                + amountToCollect + " chips");
+                        handHistory.add(p + " hand: " + h + " handvalue: " + h.getHandValue() + " dealer: "
+                                + dealer.getActiveHand() + " handvalue: " + dealer.getActiveHand().getHandValue()
+                                + " collected: " + amountToCollect + " chips");
                     }
                 }
 
@@ -562,36 +570,6 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         }
         if (isNextActionDeterministic)
             setAvailableActions();
-    }
-
-    public boolean checkForBlackJack(ArrayList<Card> hand) {
-        return hand.get(0).rank.getValue() + hand.get(1).rank.getValue() == 21 && hand.size() == 2;
-    }
-
-    public boolean isNextPlayerDealer() {
-        // refactor check for dealer
-        return players[getNextPlayer()].equals(dealer);
-    }
-
-    public int getHandValue(ArrayList<Card> hand) {
-        int result = 0;
-        int aces = 0;
-        for (Card c : hand) {
-            if (c.rank.equals(Card.Rank.ACE)) {
-                aces++;
-            }
-            result = c.rank.getValue();
-        }
-        for (int i = 0; i < aces; i++) {
-            if (result > 21) {
-                result -= 10;
-            }
-        }
-        return result;
-    }
-
-    public boolean isBust(ArrayList<Card> hand) {
-        return getHandValue(hand) > 21;
     }
 
     @Override
@@ -655,6 +633,10 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             }
         }
         return true;
+    }
+
+    public ArrayList<String> getHandHistory() {
+        return handHistory;
     }
 
 }
