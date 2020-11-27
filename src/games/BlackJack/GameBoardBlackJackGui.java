@@ -142,6 +142,7 @@ public class GameBoardBlackJackGui extends JFrame {
                 handPanel.add(getCard(c));
             }
         }
+        handPanel.add(new JLabel(" Value: " + h.getHandValue()));
         return handPanel;
     }
 
@@ -161,7 +162,7 @@ public class GameBoardBlackJackGui extends JFrame {
         return playerPanel;
     }
 
-    public JPanel dealerPanel(Player dealer) {
+    public JPanel dealerPanel(Dealer dealer) {
         JPanel dealerPanel = new JPanel();
         dealerPanel.setLayout(new BoxLayout(dealerPanel, BoxLayout.Y_AXIS));
         dealerPanel.add(new JLabel("Dealer"));

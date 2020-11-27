@@ -9,6 +9,8 @@ public class Player {
     private double betThisRound[] = new double[24];
     private boolean splitHand = false;
     private int activeHandIndex = 0;
+    private double insurance = 0;
+    private boolean surrender = false;
 
     String name;
 
@@ -28,7 +30,7 @@ public class Player {
                 }
             }
         }
-
+        this.insurance = other.insurance;
         this.name = other.name;
         this.chips = other.chips;
         this.splitHand = other.splitHand;
@@ -70,7 +72,10 @@ public class Player {
         hands.clear();
         betThisRound = new double[24];
         activeHandIndex = 0;
+        insurance = 0;
         splitHand = false;
+        surrender = false;
+
     }
 
     public String toString() {
@@ -109,4 +114,20 @@ public class Player {
         chips -= betThisRound[activeHandIndex];
     }
 
+    public void insurance() {
+        chips -= betThisRound[0];
+        insurance = betThisRound[0];
+    }
+
+    public double insuranceAmount() {
+        return insurance;
+    }
+
+    public void surrender() {
+        surrender = true;
+    }
+
+    public boolean hasSurrender() {
+        return surrender;
+    }
 }
