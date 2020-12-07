@@ -70,10 +70,11 @@ public class GameBoardBlackJackGui extends JFrame {
 
         m_so = (StateObserverBlackJack) m_gb.getStateObs();
         actionZone.setLayout(new GridLayout(2, 1));
-        actionZone.add(getActionZone(m_so));
-        playerZone.add(playerPanel(m_so.getPlayers()[0]));
-        dealerZone.add(dealerPanel(m_so.getDealer()));
-        actionZone.add(handHistoryPanel(m_so));
+        // actionZone.add(getActionZone(m_so));
+        // playerZone.add(playerPanel(m_so.getPlayers()[0]));
+        // playerZone.add(playerPanel(m_so.getPlayers()[1]));
+        // dealerZone.add(dealerPanel(m_so.getDealer()));
+        // actionZone.add(handHistoryPanel(m_so));
         this.add(window);
         this.setVisible(true);
         this.repaint();
@@ -84,6 +85,7 @@ public class GameBoardBlackJackGui extends JFrame {
         clear();
         actionZone.add(getActionZone(so));
         playerZone.add(playerPanel(so.getPlayers()[0]));
+        playerZone.add(playerPanel(so.getPlayers()[1]));
         dealerZone.add(dealerPanel(so.getDealer()));
         actionZone.add(handHistoryPanel(so));
         this.setVisible(true);
@@ -169,6 +171,7 @@ public class GameBoardBlackJackGui extends JFrame {
         if (dealer.getActiveHand() != null) {
             dealerPanel.add(getHandPanel(dealer.getActiveHand()));
         }
+        System.out.println(dealer.getActiveHand());
         return dealerPanel;
     }
 

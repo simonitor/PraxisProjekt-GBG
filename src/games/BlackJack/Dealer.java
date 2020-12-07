@@ -42,7 +42,7 @@ public class Dealer {
     }
 
     public boolean hasHand() {
-        return !hands.isEmpty();
+        return activeHand != null;
     }
 
 }

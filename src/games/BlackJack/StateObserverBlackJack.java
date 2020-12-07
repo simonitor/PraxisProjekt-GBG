@@ -1,6 +1,7 @@
 package games.BlackJack;
 
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 import games.ObserverBase;
 import games.StateObsNondeterministic;
@@ -15,26 +16,27 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     // be added later.
 
     private static final long serialVersionUID = 1L;
-    private int NUM_PLAYERS = 1;
-    private Player p1;
+    private int NUM_PLAYERS = 2;
     private ArrayList<Types.ACTIONS> availableActions = new ArrayList<Types.ACTIONS>();
     private Player currentPlayer;
     private boolean isNextActionDeterministic = true;
     private ArrayList<Integer> availableRandoms = new ArrayList<Integer>();
     private Deck deck = new Deck();
     private Dealer dealer;
-    private Player players[] = new Player[1];
+    private Player players[] = new Player[NUM_PLAYERS];
     private int playersTurn;
     private gamePhase gPhase = gamePhase.BETPHASE;
     private boolean playerActedInPhase[] = new boolean[NUM_PLAYERS];
     private ArrayList<String> handHistory = new ArrayList<String>();
+    private GameBoardBlackJackGui bjGui;
 
-    public StateObserverBlackJack() {
+    public StateObserverBlackJack(GameBoardBlackJackGui bjGui) {
         // defaultState
         // adding dealer and player/s
+        this.bjGui = bjGui;
         dealer = new Dealer("dealer");
-        p1 = new Player("p1");
-        players[0] = p1;
+        players[0] = new Player("p1");
+        players[1] = new Player("p2");
         playersTurn = 0;
         currentPlayer = getCurrentPlayer();
         setAvailableActions();
@@ -44,15 +46,16 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         super(other);
         this.playersTurn = other.playersTurn;
         this.dealer = new Dealer(other.dealer);
-        this.p1 = new Player(other.p1);
         this.availableRandoms = new ArrayList<>(other.availableRandoms);
         this.availableActions = new ArrayList<>(other.availableActions);
         this.isNextActionDeterministic = other.isNextActionDeterministic;
         this.currentPlayer = getCurrentPlayer();
-        this.players[0] = p1;
+        this.players[0] = new Player(other.players[0]);
+        this.players[1] = new Player(other.players[1]);
         this.gPhase = other.gPhase;
         this.playerActedInPhase = other.playerActedInPhase.clone();
         this.handHistory = new ArrayList<>(other.handHistory);
+        this.bjGui = other.bjGui;
     }
 
     enum BlackJackActionDet {
@@ -102,12 +105,19 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         }
     }
 
+    public enum PartialStateMode {
+        THIS_PLAYER, WHATS_ON_TABLE, FULL
+    }
+
     @Override
     public StateObservation partialState() {
         // even needed?
         StateObserverBlackJack p_so = new StateObserverBlackJack(this);
-        p_so.dealer.activeHand.getCards().remove(1);
-        p_so.dealer.activeHand.getCards().add(new Card(Card.Rank.X, Card.Suit.X, 999));
+        if (dealer.hasHand() && dealer.getActiveHand().size() == 2) {
+
+            p_so.dealer.activeHand.getCards().remove(1);
+            p_so.dealer.activeHand.getCards().add(new Card(Card.Rank.X, Card.Suit.X, 999));
+        }
         return p_so;
 
     }
@@ -545,7 +555,19 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                     // even if the opponent got 18, dealer got 17 and there is only this one
                     // opponent
                     dealer.activeHand.addCard(deck.draw());
+
                 }
+                System.out.println("before update");
+                bjGui.update(this, false, false);
+                System.out.println("after update sleep now 2 secs");
+
+                try {
+                    TimeUnit.SECONDS.sleep(2);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                System.out.println("after sleep");
                 advancePhase();
                 isNextActionDeterministic = false;
                 break;
@@ -588,11 +610,20 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                                 }
                             }
                         }
+
                         p.collect(amountToCollect);
                         handHistory.add(p + " hand: " + h + " handvalue: " + h.getHandValue() + " dealer: "
                                 + dealer.getActiveHand() + " handvalue: " + dealer.getActiveHand().getHandValue()
                                 + " collected: " + amountToCollect + " chips");
+
                     }
+                }
+
+                bjGui.update(this, false, false);
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
 
                 // Setup new Round
