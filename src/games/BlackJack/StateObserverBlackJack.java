@@ -63,6 +63,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         this.bjGui = other.bjGui;
     }
 
+    // mapping Deterministic actions to ENUMS to get more readable code
     enum BlackJackActionDet {
         BET1(0), BET5(1), BET10(2), BET25(3), BET50(4), BET100(5), HIT(6), STAND(7), DOUBLEDOWN(8), SPLIT(9),
         SURRENDER(10), INSURANCE(11);
@@ -78,6 +79,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         }
     }
 
+    // mapping NonDeterministic actions to ENUMS
     enum BlackJackActionNonDet {
         DEALCARD(0), DEALERPLAYS(1), PAYPLAYERS(2);
 
@@ -92,6 +94,12 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         }
     }
 
+    // Enum Gamephases to keep track of the phase the game is in
+    // BPHASE -> Players need to place a bet before they get cards
+    // DEALPHASE -> Players and Dealer get dealt 2 cards
+    // PLAYERONACTION -> Players play their hand(s)
+    // DEALERONACTION -> Dealer Plays his hand (nondetermenistic)
+    // PAYOUT -> Determin which players won against the dealer and paying them
     enum gamePhase {
         BETPHASE(0), DEALPHASE(1), PLAYERONACTION(2), DEALERONACTION(3), PAYOUT(4);
 
@@ -170,7 +178,16 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public String stringDescr() {
-        return "xyz";
+        String result = "";
+        for (Player p : players) {
+            result += p;
+        }
+        result += "player to move: " + players[getPlayer()].name + "\nhis available actions :\n";
+        for (Types.ACTIONS a : getAllAvailableActions()) {
+            result += BlackJackActionDet.values()[a.toInt()].name() + " - ";
+        }
+        result = "dealer : " + dealer.getActiveHand();
+        return result;
     }
 
     @Override
@@ -245,9 +262,12 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public void advance(ACTIONS action) {
+        // splittinig the advance into
+        // Deterministic
         if (isNextActionDeterministic()) {
             advanceDeterministic(action);
         }
+        // and NonDeterministic
         while (!isNextActionDeterministic()) {
             advanceNondeterministic();
         }
@@ -314,8 +334,8 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             }
             if (!currentPlayer.getActiveHand().isHandFinished()) {
                 // enters after Player has placed his bet
-                // assuming this is only entered if u are not bust and u got no BlackJack nor 21
-                // this should be detected somewher else
+                // player is not bust nor got 21 nor got a blackjack because the hand is not
+                // fnished
 
                 // Stand - Player wants no more cards for this hand
                 availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.STAND.getAction()));
@@ -335,6 +355,14 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 if (playersHand.size() == 2 && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
                     availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.DOUBLEDOWN.getAction()));
                 }
+
+                // Condition: Dealers open card is an Ace, player has enough chips to do so
+                if (dealer.getActiveHand().getCards().get(0).rank.equals(Card.Rank.ACE)
+                        && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
+                    availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.INSURANCE.getAction()));
+                }
+
+                // Player can always surrender
                 availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.SURRENDER.getAction()));
             } else { // The hand is finished, the player can only stand/passToNext
                 availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.STAND.getAction()));
@@ -355,7 +383,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public ACTIONS getAction(int i) {
-        return null;
+        return ACTIONS.fromInt(i);
     }
 
     @Override
@@ -386,10 +414,13 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     @Override
     public void advanceDeterministic(ACTIONS action) {
         currentPlayer = getCurrentPlayer();
+        // convert action to enum
         BlackJackActionDet a = BlackJackActionDet.values()[action.toInt()];
+        // store as last move
         addToLastMoves(action);
         isNextActionDeterministic = true;
 
+        // this switch only changes player attributes caused by the action
         switch (a) {
             case BET1:
                 currentPlayer.bet(1);
@@ -425,7 +456,8 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             default:
                 break;
         }
-
+        // this switch determins if the next action is determinisic or nondeterministic,
+        // if it is the next players turn and if the gamePhase advences
         switch (a) {
             case BET1:
             case BET5:
@@ -435,12 +467,17 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             case BET100:
             case STAND:
             case SURRENDER:
-                if (currentPlayer.setNextHandActive() != null) {
-                    isNextActionDeterministic = false;
-                } else {
-                    passToNextPlayer();
-                    isNextActionDeterministic = !everyPlayerActed(); // immer false für 1 spieler
-                    if (everyPlayerActed()) {
+                if (currentPlayer.setNextHandActive() != null) { // has player more hands? only important in case stand
+                    isNextActionDeterministic = false; // if yes the next hand is active now, Split hands always have
+                                                       // only one card so the next hand needs to get dealt one more
+                                                       // card. Next action is nondeterministic because the card dealt
+                                                       // is random
+                } else { // player has no more hands
+                    passToNextPlayer(); // pass to next
+                    isNextActionDeterministic = !everyPlayerActed(); // if every player acted == true, its dealers turn.
+                                                                     // Dealers turn is nondeterministic. Otherwise its
+                                                                     // next players turn, next action is deterministic
+                    if (everyPlayerActed()) { // advance the gamePhase
                         advancePhase();
                     }
                 }
@@ -455,13 +492,14 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             default:
                 break;
         }
-        if (isNextActionDeterministic) {
+        if (isNextActionDeterministic) { // we only need to set actions if the next action is deterministic
             setAvailableActions();
         }
 
     }
 
-    public void setAvailableRandoms() {
+    public void setAvailableRandoms() { // the gamephase determins which nondeterministic action is triggered
+                                        // problem because it is not randomly chosen??????
         availableRandoms.clear();
         switch (gPhase) {
             case DEALPHASE:
@@ -486,7 +524,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         setPlayer(0);
     }
 
-    public boolean isDealPhase() {
+    public boolean isDealPhase() { // deprecated?
         // dealers handsize < 2 ?
         if (!dealer.hasHand()) {
             return true;
@@ -506,24 +544,22 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         }
         BlackJackActionNonDet a = BlackJackActionNonDet.values()[action.toInt()];
 
-        // feststellen ob next act det
-        // feststellen ob an naechsten spieler weiter
-        // tracken ob jeder spieler dran war in der phase -> phase anpassen
-
         switch (a) {
-            case DEALCARD:
+            case DEALCARD: // a card gets dealt
                 currentPlayer = getCurrentPlayer();
                 switch (gPhase) {
 
                     case DEALPHASE:
-                        if (everyPlayerActed()) {
+                        // in dealphase the cards get dealt 1 by 1
+                        if (everyPlayerActed()) { // if true dealer gets a card
                             dealer.addCardToActiveHand(deck.draw());
                             playerActedInPhase = new boolean[NUM_PLAYERS];
-                            if (dealer.getActiveHand().size() == 2) {
+                            if (dealer.getActiveHand().size() == 2) { // if dealer has 2 cards dealing is over advance
+                                                                      // into next phase (next action det)
                                 advancePhase();
                                 isNextActionDeterministic = true;
                             }
-                        } else {
+                        } else { // every player gets one card
                             currentPlayer.addCardToActiveHand(deck.draw());
                             passToNextPlayer();
                             isNextActionDeterministic = false;
@@ -531,11 +567,17 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                         break;
 
                     case PLAYERONACTION:
+                        // nonDeterministic advance that a player triggered by his last action
                         Hand currentHand = currentPlayer.getActiveHand();
                         int f = getLastMove();
+                        // get the last deterministic action
                         Types.ACTIONS i = Types.ACTIONS.fromInt(f);
                         BlackJackActionDet lastAction = BlackJackActionDet.values()[i.toInt()];
+                        // every NonDeterministicAdvance triggered by a players action is about getting
+                        // a card dealt
                         currentHand.addCard(deck.draw());
+
+                        // consequence of the card being dealt and the last action
                         switch (lastAction) {
                             case DOUBLEDOWN:
                                 currentHand.setHandFinished();
@@ -543,29 +585,31 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                                 break;
                         }
 
-                        if (currentHand.isHandFinished()) {
-                            if (currentPlayer.setNextHandActive() != null) {
-                                isNextActionDeterministic = false;
-                            } else {
+                        if (currentHand.isHandFinished()) { // checking if the hand is finished, manualy finished or
+                                                            // handvalue > 20
+                            if (currentPlayer.setNextHandActive() != null) { // check for more hands
+                                isNextActionDeterministic = false; // if more hands, the next hand needs to get dealt
+                                                                   // one more card for sure (nondet)
+                            } else { // no more hands, pass to next
                                 passToNextPlayer();
                                 isNextActionDeterministic = true;
-                                if (everyPlayerActed()) {
+                                if (everyPlayerActed()) { // if everyone acted the advance to next gamePhase
                                     advancePhase();
-                                    isNextActionDeterministic = false;
+                                    isNextActionDeterministic = false; // dealer will play his hand, envoirement nondet
                                 }
                             }
-                        } else {
+                        } else { // players hand is not finished, still same players turn next action det
                             isNextActionDeterministic = true;
                         }
                         break;
 
                     default:
-                        System.out.print("ärror xD");
+                        System.out.print("err ");
                         break;
 
                 }
-
                 break;
+
             case DEALERPLAYS:
                 while (dealer.getActiveHand().getHandValue() < 17) {
                     // The dealer will always hit under 17 and will always stay on 17 or higher,
@@ -574,10 +618,10 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                     dealer.activeHand.addCard(deck.draw());
 
                 }
-
-                advancePhase();
+                advancePhase(); // dealer finished advance to next gamePhase
                 isNextActionDeterministic = false;
                 break;
+
             case PAYPLAYERS:
                 for (Player p : players) {
 
@@ -648,6 +692,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                         bjGui.repaint();
                     }
                 });
+
                 // Setup new Round
                 for (Player p : players) {
                     p.clearHand();

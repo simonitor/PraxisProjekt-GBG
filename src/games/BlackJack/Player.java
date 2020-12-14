@@ -131,4 +131,12 @@ public class Player {
     public boolean hasSurrender() {
         return surrender;
     }
+
+    public String toString() {
+        String result = name + " chips" + chips;
+        for (Hand h : hands) {
+            result += "\nhand : " + h;
+        }
+        return result;
+    }
 }
