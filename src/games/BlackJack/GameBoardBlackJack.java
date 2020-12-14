@@ -63,7 +63,9 @@ public class GameBoardBlackJack implements GameBoard {
         }
 
         if (m_gameGui != null)
-            m_gameGui.update(soT, withReset, showValueOnGameboard);
+            m_gameGui.update(
+                    (StateObserverBlackJack) soT.partialState(StateObserverBlackJack.PartialStateMode.THIS_PLAYER),
+                    withReset, showValueOnGameboard);
 
     }
 
@@ -133,9 +135,7 @@ public class GameBoardBlackJack implements GameBoard {
 
     public void humanMove(int a) {
         Types.ACTIONS act = Types.ACTIONS.fromInt(a);
-        System.out.println("trying to perform action :" + a);
         m_so.advance(act);
-        System.out.println("action :" + a + " performed");
         arenaActReq = true;
     }
 

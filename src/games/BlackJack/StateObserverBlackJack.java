@@ -3,6 +3,8 @@ package games.BlackJack;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.SwingUtilities;
+
 import games.ObserverBase;
 import games.StateObsNondeterministic;
 import games.StateObservation;
@@ -15,8 +17,9 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     // First version only features 1 Player vs the Dealer, N Players vs Dealer will
     // be added later.
 
+    StateObserverBlackJack test = this;
     private static final long serialVersionUID = 1L;
-    private int NUM_PLAYERS = 2;
+    private int NUM_PLAYERS = 3;
     private ArrayList<Types.ACTIONS> availableActions = new ArrayList<Types.ACTIONS>();
     private Player currentPlayer;
     private boolean isNextActionDeterministic = true;
@@ -28,15 +31,16 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     private gamePhase gPhase = gamePhase.BETPHASE;
     private boolean playerActedInPhase[] = new boolean[NUM_PLAYERS];
     private ArrayList<String> handHistory = new ArrayList<String>();
-    private GameBoardBlackJackGui bjGui;
+    private transient GameBoardBlackJackGui bjGui;
 
     public StateObserverBlackJack(GameBoardBlackJackGui bjGui) {
         // defaultState
         // adding dealer and player/s
         this.bjGui = bjGui;
         dealer = new Dealer("dealer");
-        players[0] = new Player("p1");
-        players[1] = new Player("p2");
+        for (int i = 0; i < players.length; i++) {
+            this.players[i] = new Player("p" + i);
+        }
         playersTurn = 0;
         currentPlayer = getCurrentPlayer();
         setAvailableActions();
@@ -50,8 +54,9 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         this.availableActions = new ArrayList<>(other.availableActions);
         this.isNextActionDeterministic = other.isNextActionDeterministic;
         this.currentPlayer = getCurrentPlayer();
-        this.players[0] = new Player(other.players[0]);
-        this.players[1] = new Player(other.players[1]);
+        for (int i = 0; i < players.length; i++) {
+            this.players[i] = new Player(other.players[i]);
+        }
         this.gPhase = other.gPhase;
         this.playerActedInPhase = other.playerActedInPhase.clone();
         this.handHistory = new ArrayList<>(other.handHistory);
@@ -105,21 +110,32 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         }
     }
 
-    public enum PartialStateMode {
-        THIS_PLAYER, WHATS_ON_TABLE, FULL
+    enum results {
+        WIN, PUSH, LOSS, SURRENDER, BLACKJACK;
     }
 
-    @Override
-    public StateObservation partialState() {
-        // even needed?
-        StateObserverBlackJack p_so = new StateObserverBlackJack(this);
-        if (dealer.hasHand() && dealer.getActiveHand().size() == 2) {
+    enum PartialStateMode {
+        THIS_PLAYER, WHATS_ON_TABLE, FULL;
+    }
 
-            p_so.dealer.activeHand.getCards().remove(1);
-            p_so.dealer.activeHand.getCards().add(new Card(Card.Rank.X, Card.Suit.X, 999));
+    public StateObservation partialState(PartialStateMode mode) {
+        switch (mode) {
+            case THIS_PLAYER:
+            case WHATS_ON_TABLE:
+                if (gPhase != gamePhase.DEALERONACTION && gPhase != gamePhase.PAYOUT) {
+                    StateObserverBlackJack p_so = new StateObserverBlackJack(this);
+                    if (dealer.hasHand() && dealer.getActiveHand().size() == 2) {
+                        p_so.dealer.activeHand.getCards().remove(1);
+                        p_so.dealer.activeHand.getCards().add(new Card(Card.Rank.X, Card.Suit.X, 999));
+                    }
+                    return p_so;
+                } else {
+                    return this;
+                }
+            case FULL:
+                return this;
         }
-        return p_so;
-
+        return this;
     }
 
     @Override
@@ -291,6 +307,11 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 e.printStackTrace();
             }
         } else if (gPhase.equals(gamePhase.PLAYERONACTION)) {
+            // insurance
+            if (dealer.getActiveHand().getCards().get(0).rank.equals(Card.Rank.ACE)
+                    && currentPlayer.insuranceAmount() == 0) {
+                availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.INSURANCE.getAction()));
+            }
             if (!currentPlayer.getActiveHand().isHandFinished()) {
                 // enters after Player has placed his bet
                 // assuming this is only entered if u are not bust and u got no BlackJack nor 21
@@ -314,12 +335,6 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 if (playersHand.size() == 2 && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
                     availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.DOUBLEDOWN.getAction()));
                 }
-                // TODO: Insurance
-
-                if (dealer.getActiveHand().getCards().get(0).rank.equals(Card.Rank.ACE)) {
-                    availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.INSURANCE.getAction()));
-                }
-
                 availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.SURRENDER.getAction()));
             } else { // The hand is finished, the player can only stand/passToNext
                 availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.STAND.getAction()));
@@ -433,9 +448,10 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             case HIT:
             case DOUBLEDOWN:
             case SPLIT:
-            case INSURANCE:
                 isNextActionDeterministic = false;
                 break;
+            case INSURANCE:
+                isNextActionDeterministic = true;
             default:
                 break;
         }
@@ -523,6 +539,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                         switch (lastAction) {
                             case DOUBLEDOWN:
                                 currentHand.setHandFinished();
+                                addToLastMoves(Types.ACTIONS.fromInt(BlackJackActionDet.STAND.action));
                                 break;
                         }
 
@@ -557,75 +574,80 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                     dealer.activeHand.addCard(deck.draw());
 
                 }
-                System.out.println("before update");
-                bjGui.update(this, false, false);
-                System.out.println("after update sleep now 2 secs");
 
-                try {
-                    TimeUnit.SECONDS.sleep(2);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                System.out.println("after sleep");
                 advancePhase();
                 isNextActionDeterministic = false;
                 break;
             case PAYPLAYERS:
                 for (Player p : players) {
+
                     if (p.hasSurrender()) { // if the player surrendered the payout already happened
-                        handHistory.add(p + " surrenders vs dealer: " + dealer.getActiveHand() + " handvalue: "
-                                + dealer.getActiveHand().getHandValue());
-                        break; // next player
-                    }
-                    for (Hand h : p.getHands()) {
-                        // case blackjack
-                        double amountToCollect = 0;
-                        double bet = p.getBetAmountForHand(h);
-                        if (dealer.getActiveHand().checkForBlackJack()) { // if the dealer got a blackjack payout
-                                                                          // insurance
-                            p.collect(p.insuranceAmount() * 2); // if the player has no inurance insuranceAmount will be
-                                                                // zero
-                        }
-                        if (h.checkForBlackJack() && !p.hasSplitHand()) { // player has blackjack, if player got a
-                                                                          // blackjack in a split hand it does not count
-                                                                          // as blackjack
-                            amountToCollect = bet; // both have blackjack push/draw player gets bet back
-                            if (!dealer.getActiveHand().checkForBlackJack()) { // dealer has no blackjack
-                                amountToCollect = bet * 2.5;
+                        handHistory.add(p + " " + results.SURRENDER + " vs dealer: " + dealer.getActiveHand()
+                                + " handvalue: " + dealer.getActiveHand().getHandValue());
+                    } else {
+                        for (Hand h : p.getHands()) {
+                            // case blackjack
+                            results r = results.LOSS;
+                            double amountToCollect = 0;
+                            double bet = p.getBetAmountForHand(h);
+                            if (dealer.getActiveHand().checkForBlackJack()) { // if the dealer got a blackjack payout
+                                                                              // insurance
+                                p.collect(p.insuranceAmount() * 2); // if the player has no inurance insuranceAmount
+                                                                    // will be
+                                                                    // zero
                             }
-                        } else { // player has no blackjack
-                            if (!h.isBust()) { // player not bust
-                                if (dealer.getActiveHand().isBust()) {// dealer is bust player not
-                                    amountToCollect = bet * 2;
-                                } else {// both not bust
-                                    if (h.getHandValue() > dealer.getActiveHand().getHandValue()) { // player wins
+                            if (h.checkForBlackJack() && !p.hasSplitHand()) { // player has blackjack, if player got a
+                                                                              // blackjack in a split hand it does not
+                                                                              // count
+                                                                              // as blackjack
+                                amountToCollect = bet; // both have blackjack push/draw player gets bet back
+                                r = results.PUSH;
+                                if (!dealer.getActiveHand().checkForBlackJack()) { // dealer has no blackjack
+                                    amountToCollect = bet * 2.5;
+                                    r = results.BLACKJACK;
+                                }
+                            } else { // player has no blackjack
+                                if (!h.isBust()) { // player not bust
+                                    if (dealer.getActiveHand().isBust()) {// dealer is bust player not
                                         amountToCollect = bet * 2;
-                                    } else if (h.getHandValue() == dealer.getActiveHand().getHandValue()) { // push/draw
-                                                                                                            // player
-                                                                                                            // gets his
-                                                                                                            // bet back
-                                        amountToCollect = bet;
+                                        r = results.WIN;
+                                    } else {// both not bust
+                                        if (h.getHandValue() > dealer.getActiveHand().getHandValue()) { // player wins
+                                            amountToCollect = bet * 2;
+                                            r = results.WIN;
+                                        } else if (h.getHandValue() == dealer.getActiveHand().getHandValue()) { // push/draw
+                                                                                                                // player
+                                                                                                                // gets
+                                                                                                                // his
+                                                                                                                // bet
+                                                                                                                // back
+                                            amountToCollect = bet;
+                                            r = results.PUSH;
+                                        }
                                     }
                                 }
                             }
+
+                            p.collect(amountToCollect);
+                            handHistory.add(p + " hand: " + h + " val=" + h.getHandValue() + " " + r + " vs. dealer: "
+                                    + dealer.getActiveHand() + " val=" + dealer.getActiveHand().getHandValue()
+                                    + " collected: " + amountToCollect + " chips");
+
                         }
-
-                        p.collect(amountToCollect);
-                        handHistory.add(p + " hand: " + h + " handvalue: " + h.getHandValue() + " dealer: "
-                                + dealer.getActiveHand() + " handvalue: " + dealer.getActiveHand().getHandValue()
-                                + " collected: " + amountToCollect + " chips");
-
                     }
                 }
+                handHistory.add("---------------------");
 
-                bjGui.update(this, false, false);
-                try {
-                    Thread.sleep(3000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                bjGui.update((StateObserverBlackJack) this, false, false);
 
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        bjGui.updateWithSleep((StateObserverBlackJack) test.partialState(PartialStateMode.THIS_PLAYER),
+                                5);
+                        bjGui.revalidate();
+                        bjGui.repaint();
+                    }
+                });
                 // Setup new Round
                 for (Player p : players) {
                     p.clearHand();
@@ -694,6 +716,10 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         setPlayer(getNextPlayer());
     }
 
+    public StateObserverBlackJack.gamePhase getCurrentPhase() {
+        return gPhase;
+    }
+
     public boolean everyPlayerActed() {
         for (boolean a : playerActedInPhase) {
             if (!a) {
@@ -701,6 +727,10 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
             }
         }
         return true;
+    }
+
+    public boolean dealersTurn() {
+        return (gPhase == gamePhase.DEALERONACTION || gPhase == gamePhase.PAYOUT);
     }
 
     public ArrayList<String> getHandHistory() {

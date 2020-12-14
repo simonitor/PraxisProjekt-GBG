@@ -30,6 +30,7 @@ public class Player {
                 }
             }
         }
+        this.surrender = other.surrender;
         this.insurance = other.insurance;
         this.name = other.name;
         this.chips = other.chips;
