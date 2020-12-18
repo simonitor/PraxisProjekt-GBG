@@ -2,16 +2,18 @@ package games;
 
 import controllers.PlayAgent;
 import org.junit.Test;
+import starters.GBGBatch;
+import starters.MTrainSweep;
 
 import java.io.IOException;
-
-import static org.junit.Assert.*;
 
 public class GBGBatchTest extends GBGBatch {
     String selectedGame = "TicTacToe";
     String agtFile = "tdntuple3.agt.zip";
     String csvFile = "test.csv";
     String[] scaPar = GBGBatch.setDefaultScaPars(selectedGame);
+
+    protected MTrainSweep mTrainSweep;
 
     @Test
     public void multiTrainAlphaSweep_T() {
@@ -29,8 +31,8 @@ public class GBGBatchTest extends GBGBatch {
         // run multiTrainAlphaSweep
         try {
             t_Game.m_xab.m_arena.taskState=Arena.Task.MULTTRN;
-            t_Game.m_xfun.m_PlayAgents[0] = multiTrainAlphaSweep(0, alphaArr, alphaFinalArr,
-                    t_Game.m_xab, t_Game.getGameBoard(), csvFile);
+            t_Game.m_xfun.m_PlayAgents[0] = mTrainSweep.multiTrainAlphaSweep(0, alphaArr, alphaFinalArr,
+                    t_Game, t_Game.m_xab, t_Game.getGameBoard(), csvFile);
             t_Game.m_xfun.m_PlayAgents[0].setAgentState(PlayAgent.AgentState.TRAINED);
             System.out.println("[GBGBatchTest] multiTrainAlphaSweep finished: Results written to "+csvFile);
         } catch (IOException e) {
@@ -54,8 +56,8 @@ public class GBGBatchTest extends GBGBatch {
         // run multiTrainLambdaSweep
         try {
             t_Game.m_xab.m_arena.taskState=Arena.Task.MULTTRN;
-            t_Game.m_xfun.m_PlayAgents[0] = multiTrainLambdaSweep(0, lambdaArr,
-                    t_Game.m_xab, t_Game.getGameBoard(), csvFile);
+            t_Game.m_xfun.m_PlayAgents[0] = mTrainSweep.multiTrainLambdaSweep(0, lambdaArr,
+                    t_Game, t_Game.m_xab, t_Game.getGameBoard(), csvFile);
             t_Game.m_xfun.m_PlayAgents[0].setAgentState(PlayAgent.AgentState.TRAINED);
             System.out.println("[GBGBatchTest] multiTrainAlphaSweep finished: Results written to "+csvFile);
         } catch (IOException e) {

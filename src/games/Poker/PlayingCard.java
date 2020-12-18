@@ -1,4 +1,4 @@
-package src.games.Poker;
+package games.Poker;
 
 import java.util.Arrays;
 
@@ -6,8 +6,10 @@ public class PlayingCard {
 
     private final int rank;
     private final int suit;
-    static String[] suits = { "♥", "♠", "♦", "♣" };
-    static String[] ranks = { "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A" };
+    //static String[] suits = { "♥", "♠", "♦", "♣" };
+    static String[] pathSuits = { "H", "S", "D", "C" };
+    static String[] suits = pathSuits;
+    static String[] ranks = { "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A" };
 
     /**
      * String representation of a rank
@@ -74,7 +76,7 @@ public class PlayingCard {
      */
     public @Override String toString()
     {
-        return "["+ suits[suit] + ranks[rank] + "]";
+        return "["+  ranks[rank] + suits[suit] +"]";
     }
 
     /**
@@ -123,5 +125,9 @@ public class PlayingCard {
             return ((PlayingCard) o).rank == rank && ((PlayingCard) o).suit == suit;
         }
         return false;
+    }
+
+    public String getImagePath(){
+        return ranks[rank] + pathSuits[suit] +".png";
     }
 }

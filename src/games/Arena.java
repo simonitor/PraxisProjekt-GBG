@@ -5,6 +5,7 @@ import controllers.AgentBase;
 import controllers.HumanPlayer;
 import controllers.MC.MCAgentN;
 import controllers.MCTS.MCTSAgentT;
+import controllers.MCTSWrapper.ConfigWrapper;
 import controllers.PlayAgent;
 import games.Hex.HexTile;
 import games.Hex.StateObserverHex;
@@ -12,6 +13,7 @@ import games.Sim.StateObserverSim;
 import games.ZweiTausendAchtundVierzig.StateObserver2048;
 import gui.ArenaGui;
 import gui.MessageBox;
+import starters.GBGLaunch;
 import tools.ScoreTuple;
 import tools.Types;
 import TournamentSystem.TSAgent;
@@ -319,6 +321,9 @@ abstract public class Arena implements Runnable {
 		gb.updateBoard(null, true, true); // update with reset
 		gb.enableInteraction(true); // needed for CFour
 
+		boolean stored_USELASTMCTS = ConfigWrapper.USELASTMCTS;
+		ConfigWrapper.USELASTMCTS = false;
+
 		while (taskState == Task.INSPECTV) {
 			if (gb.isActionReq()) {
 				gb.setActionReq(false);
@@ -384,7 +389,9 @@ abstract public class Arena implements Runnable {
 			}
 
 		} // while(taskState == Task.INSPECTV) [will be left only by the break
-			// above or when taskState changes]
+		  // above or when taskState changes]
+
+		ConfigWrapper.USELASTMCTS = stored_USELASTMCTS;
 
 		// We arrive here under three conditions:
 		// 1) InspectV pressed again --> taskState changed to Task.IDLE

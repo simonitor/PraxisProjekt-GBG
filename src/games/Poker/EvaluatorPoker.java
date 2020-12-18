@@ -1,4 +1,4 @@
-package src.games.Poker;
+package games.Poker;
 
 import controllers.PlayAgent;
 import controllers.PlayAgtVector;
@@ -20,7 +20,7 @@ public class EvaluatorPoker extends Evaluator {
 	private final RandomAgent randomAgent2 = new RandomAgent("Random");
 	private final RandomAgent randomAgent3 = new RandomAgent("Random");
 
-	protected double[] m_thresh={0.8}; // threshold for each value of m_mode
+	protected double[] m_thresh={0.1}; // threshold for each value of m_mode
 
 	protected static ArrayList<StateObserverPoker> diffStartList = null;
 
@@ -49,13 +49,15 @@ public class EvaluatorPoker extends Evaluator {
 
 	public double evalAgent1(PlayAgent playAgent, PlayAgent opponent,PlayAgent opponent2,PlayAgent opponent3, GameBoard gb) {
 		StateObservation so = gb.getDefaultStartState();
-		ScoreTuple sc = XArenaFuncs.competeNPlayerAllRoles(new PlayAgtVector(playAgent,opponent,opponent2,opponent3), so, 1, 0);
+		PlayAgent[] pavec = new PlayAgent[] {playAgent,opponent,opponent2,opponent3};
+
+		ScoreTuple sc = XArenaFuncs.competeNPlayerAllRoles(new PlayAgtVector(pavec), so, 1000, 1);
 		lastResult = sc.scTup[0];
 		m_msg = playAgent.getName()+": "+getPrintString() + lastResult;
 		if (this.verbose>0) System.out.println(m_msg);
 		return lastResult;
 	}
-	
+
 
  	@Override
  	public int[] getAvailableModes() {
@@ -81,7 +83,7 @@ public class EvaluatorPoker extends Evaluator {
 	public String getPrintString() {
 		return switch (m_mode) {
 			case -1 -> "no evaluation done ";
-			case 0 -> "success rate (against randomAgent, best is 0.9): ";
+			case 0 -> "success rate (against randomAgent): ";
 			default -> null;
 		};
 	}

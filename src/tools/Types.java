@@ -12,7 +12,6 @@ import javax.swing.plaf.FontUIResource;
 import controllers.MaxNAgent;
 import games.Arena;
 import games.RubiksCube.CubeState2x2;
-import games.RubiksCube.DAVI3Agent;
 import games.RubiksCube.StateObserverCube;
 import games.StateObservation;
 
@@ -32,7 +31,7 @@ public class Types {
 	 *  @see ACTIONS_ST
 	 */
     public static class ACTIONS implements Serializable, Comparable<ACTIONS> {
-        private int key;
+        private final int key;
         private boolean randomSelect = false; // true, if this action was selected at random
 
 		/**
@@ -78,18 +77,15 @@ public class Types {
             return key;
         }
 
-        @Override
+		/**
+		 *
+		 * @param action	the action to compare with
+		 * @return -1 if this.key < action.key, 0 if equal, +1 if this.key > action.key
+		 */
+		@Override
         public int compareTo(ACTIONS action) {
-            if(key < action.key) {
-                return -1;
-            }
-
-            if(key > action.key) {
-                return 1;
-            }
-
-            return 0;
-        }
+			return Integer.compare(key, action.key);
+		}
         
     	public boolean isRandomAction() {
 			return randomSelect;
@@ -104,24 +100,22 @@ public class Types {
 		public boolean isEqualToInverseOfLastAction(StateObservation so) {
 			if (so instanceof StateObserverCube) {
 				Types.ACTIONS inverseAct = inverseAction(((StateObserverCube) so).getLastAction(),so);
-				if (this.equals(inverseAct))
-					return true;
+				return this.equals(inverseAct);
 			}
 			return false; 	// for all games other than RubiksCube
 		}
 
 		private ACTIONS inverseAction(ACTIONS act, StateObservation so) {
         	if (so instanceof StateObserverCube) {
+				int[] inverseActs;
         		if (((StateObserverCube) so).getCubeState() instanceof CubeState2x2) {
-					int[] inverseActs = {2,1,0, 5,4,3, 8,7,6, 9};	// '9' codes 'not known' --> we return 'not known'
-					int iAction = act.toInt();
-					return new ACTIONS(inverseActs[iAction]);
+					inverseActs = new int[]{2,1,0, 5,4,3, 8,7,6, 9};	// '9' codes 'not known' --> we return 'not known'
 				} else { // CubeState3x3 case
-					int[] inverseActs = { 2, 1,0,   5, 4, 3,   8, 7, 6,
-							             11,10,9,  14,13,12,  17,16,15,  18};	// '18' codes 'not known' --> we return 'not known'
-					int iAction = act.toInt();
-					return new ACTIONS(inverseActs[iAction]);
+					inverseActs = new int[]{ 2, 1,0,   5, 4, 3,   8, 7, 6,
+							                11,10,9,  14,13,12,  17,16,15,  18};	// '18' codes 'not known' --> we return 'not known'
 				}
+				int iAction = act.toInt();
+				return new ACTIONS(inverseActs[iAction]);
 			}
         	throw new RuntimeException("No inverseAction known for object so of class "+so.getClass().getSimpleName());
 		}
@@ -152,7 +146,7 @@ public class Types {
 	 *  Class ACTIONS_VT (= ACTIONS + VTable + ScoreTuple) is derived from ACTIONS.
 	 *  It has the additional members 
 	 *  <ul>
-	 *  <li> double[] vTable: the game values for all other available actions when this action
+	 *  <li> double[] vTable: the game values for all available actions when this action
 	 *  	 is created via PlayAgent.getNextAction2(so,...) 
 	 *  <li> double   vBest: the game value for the best action returned from 
 	 *  	 PlayAgent.getNextAction2(so,...)
@@ -182,20 +176,21 @@ public class Types {
             super(numVal,random);
         }
 
-        /**
-         * 
-         * @param numVal	action code
-         * @param random	flag for random move	
-         * @param vtable	game values for all K available actions (+1)
-         * <p>
-         * It is assumed that {@code vtable} has K+1 elements and vtable[K] is the game value
-         * for {@code this} action. 
-         */
-        public ACTIONS_VT(int numVal, boolean random, double [] vtable) {			
-            super(numVal,random);
-            this.vTable = vtable.clone();
-            this.vBest = vtable[vtable.length-1];
-        }
+        // --- obsolete, use ACTIONS_VT(int , boolean , double [] , double , ScoreTuple scBest) instead ---
+//        /**
+//         *
+//         * @param numVal	action code
+//         * @param random	flag for random move
+//         * @param vtable	game values for all K available actions (+1)
+//         * <p>
+//         * It is assumed that {@code vtable} has K+1 elements and vtable[K] is the game value
+//         * for {@code this} action.
+//         */
+//        public ACTIONS_VT(int numVal, boolean random, double [] vtable) {
+//            super(numVal,random);
+//            this.vTable = vtable.clone();
+//            this.vBest = vtable[vtable.length-1];
+//        }
 
         /**
          * @param numVal	action code
@@ -235,13 +230,13 @@ public class Types {
     } // class ACTIONS_VT
 
 
-    public static enum WINNER {
+    public enum WINNER {
         PLAYER_DISQ(-100),
         TIE(0),
         PLAYER_LOSES(-1),
         PLAYER_WINS(1);
 
-        private int key;
+        private final int key;
         WINNER(int val) {key=val;}
         public int key() {return key;}
         public int toInt() {
