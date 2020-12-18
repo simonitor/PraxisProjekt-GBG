@@ -30,7 +30,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     private int playersTurn;
     private gamePhase gPhase = gamePhase.BETPHASE;
     private boolean playerActedInPhase[] = new boolean[NUM_PLAYERS];
-    private ArrayList<String> handHistory = new ArrayList<String>();
+    private ArrayList<String> log = new ArrayList<String>();
     private transient GameBoardBlackJackGui bjGui;
 
     public StateObserverBlackJack(GameBoardBlackJackGui bjGui) {
@@ -59,7 +59,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
         }
         this.gPhase = other.gPhase;
         this.playerActedInPhase = other.playerActedInPhase.clone();
-        this.handHistory = new ArrayList<>(other.handHistory);
+        this.log = new ArrayList<>(other.log);
         this.bjGui = other.bjGui;
     }
 
@@ -626,7 +626,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 for (Player p : players) {
 
                     if (p.hasSurrender()) { // if the player surrendered the payout already happened
-                        handHistory.add(p + " " + results.SURRENDER + " vs dealer: " + dealer.getActiveHand()
+                        log.add(p + " " + results.SURRENDER + " vs dealer: " + dealer.getActiveHand()
                                 + " handvalue: " + dealer.getActiveHand().getHandValue());
                     } else {
                         for (Hand h : p.getHands()) {
@@ -673,14 +673,14 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                             }
 
                             p.collect(amountToCollect);
-                            handHistory.add(p + " hand: " + h + " val=" + h.getHandValue() + " " + r + " vs. dealer: "
+                            log.add(p + " hand: " + h + " val=" + h.getHandValue() + " " + r + " vs. dealer: "
                                     + dealer.getActiveHand() + " val=" + dealer.getActiveHand().getHandValue()
                                     + " collected: " + amountToCollect + " chips");
 
                         }
                     }
                 }
-                handHistory.add("---------------------");
+                log.add("---------------------");
 
                 bjGui.update((StateObserverBlackJack) this, false, false);
 
@@ -779,7 +779,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
     }
 
     public ArrayList<String> getHandHistory() {
-        return handHistory;
+        return log;
     }
 
 }

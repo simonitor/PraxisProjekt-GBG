@@ -79,9 +79,7 @@ public class Player {
 
     }
 
-    public String toString() {
-        return name;
-    }
+
 
     public double betOnActiveHand() {
         return betThisRound[activeHandIndex];
