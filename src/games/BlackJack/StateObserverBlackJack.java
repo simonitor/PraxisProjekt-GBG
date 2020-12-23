@@ -355,13 +355,6 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 if (playersHand.size() == 2 && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
                     availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.DOUBLEDOWN.getAction()));
                 }
-
-                // Condition: Dealers open card is an Ace, player has enough chips to do so
-                if (dealer.getActiveHand().getCards().get(0).rank.equals(Card.Rank.ACE)
-                        && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
-                    availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.INSURANCE.getAction()));
-                }
-
                 // Player can always surrender
                 availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.SURRENDER.getAction()));
             } else { // The hand is finished, the player can only stand/passToNext
@@ -626,7 +619,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 for (Player p : players) {
 
                     if (p.hasSurrender()) { // if the player surrendered the payout already happened
-                        log.add(p + " " + results.SURRENDER + " vs dealer: " + dealer.getActiveHand()
+                        log.add(p.name + " " + results.SURRENDER + " vs dealer: " + dealer.getActiveHand()
                                 + " handvalue: " + dealer.getActiveHand().getHandValue());
                     } else {
                         for (Hand h : p.getHands()) {
@@ -673,15 +666,15 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                             }
 
                             p.collect(amountToCollect);
-                            log.add(p + " hand: " + h + " val=" + h.getHandValue() + " " + r + " vs. dealer: "
+                            log.add(p.name + " hand: " + h + " val=" + h.getHandValue() + " " + r + " vs. dealer: "
                                     + dealer.getActiveHand() + " val=" + dealer.getActiveHand().getHandValue()
                                     + " collected: " + amountToCollect + " chips");
 
                         }
                     }
                 }
-                log.add("---------------------");
-
+                log.add("---------------------------");
+                /**
                 bjGui.update((StateObserverBlackJack) this, false, false);
 
                 SwingUtilities.invokeLater(new Runnable() {
@@ -692,7 +685,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                         bjGui.repaint();
                     }
                 });
-
+                */
                 // Setup new Round
                 for (Player p : players) {
                     p.clearHand();

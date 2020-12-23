@@ -6,13 +6,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SpringLayout;
+import javax.swing.*;
 import java.awt.FlowLayout;
 
 import java.awt.event.ActionEvent;
@@ -25,6 +19,11 @@ import params.GridLayout2;
 import tools.Types;
 
 public class GameBoardBlackJackGui extends JFrame {
+
+
+    private JTextArea log;
+    JScrollPane scrollPaneLog;
+    int count = 0;
 
     class ActionHandler implements ActionListener {
         int action;
@@ -59,13 +58,28 @@ public class GameBoardBlackJackGui extends JFrame {
         window.setLayout(spr);
 
         dealerZone = new JPanel();
+        dealerZone.setBorder(BorderFactory.createLineBorder(Color.orange, 1));
         playerZone = new JPanel();
+        playerZone.setBorder(BorderFactory.createLineBorder(Color.orange, 1));
         actionZone = new JPanel();
+        actionZone.setBorder(BorderFactory.createLineBorder(Color.orange, 1));
 
+        // Set West and East bounds
         spr.putConstraint(SpringLayout.EAST, dealerZone, 0, SpringLayout.EAST, window);
         spr.putConstraint(SpringLayout.WEST, actionZone, 0, SpringLayout.WEST, window);
         spr.putConstraint(SpringLayout.EAST, playerZone, 0, SpringLayout.WEST, dealerZone);
         spr.putConstraint(SpringLayout.WEST, playerZone, 0, SpringLayout.EAST, actionZone);
+
+        // Set South bounds
+        spr.putConstraint(SpringLayout.SOUTH, actionZone, 0, SpringLayout.SOUTH, window);
+        spr.putConstraint(SpringLayout.SOUTH, dealerZone, 0, SpringLayout.SOUTH, window);
+        spr.putConstraint(SpringLayout.SOUTH, playerZone, 0, SpringLayout.SOUTH, window);
+
+        // Set North bounds
+        spr.putConstraint(SpringLayout.NORTH, playerZone, 0, SpringLayout.NORTH, window);
+        spr.putConstraint(SpringLayout.NORTH, dealerZone, 0, SpringLayout.NORTH, window);
+        spr.putConstraint(SpringLayout.NORTH, actionZone, 0, SpringLayout.NORTH, window);
+
         dealerZone.setBackground(new Color(100, 1, 1));
         playerZone.setBackground(new Color(1, 100, 1));
         actionZone.setBackground(new Color(1, 1, 100));
@@ -74,8 +88,9 @@ public class GameBoardBlackJackGui extends JFrame {
         window.add(playerZone);
         window.add(dealerZone);
 
-        spr.putConstraint(SpringLayout.NORTH, playerZone, 0, SpringLayout.NORTH, window);
-        spr.putConstraint(SpringLayout.NORTH, dealerZone, 0, SpringLayout.NORTH, window);
+
+
+
 
         playerZone.setPreferredSize(new Dimension(450, 800));
         actionZone.setPreferredSize(new Dimension(600, 800));
@@ -87,7 +102,6 @@ public class GameBoardBlackJackGui extends JFrame {
 
         this.add(window);
         this.setVisible(true);
-        this.pack();
         this.revalidate();
         this.repaint();
         this.addComponentListener(this);
@@ -104,12 +118,16 @@ public class GameBoardBlackJackGui extends JFrame {
         }
         dealerZone.add(dealerPanel(so.getDealer()));
         actionZone.add(handHistoryPanel(so));
+        scrollPaneLog.getVerticalScrollBar().setValue(
+                scrollPaneLog.getVerticalScrollBar().getMaximum()
+        );
+        System.out.println("ab" + count++);
         this.revalidate();
         this.repaint();
 
     }
 
-    public void updateWithSleep(StateObserverBlackJack so, int seconds) {
+    public void updateWithSleep(StateObserverBlackJack so, long seconds) {
         update(so, false, false);
         try {
             Thread.sleep(seconds * 1000);
@@ -155,12 +173,17 @@ public class GameBoardBlackJackGui extends JFrame {
 
     public JPanel handHistoryPanel(StateObserverBlackJack so) {
         JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        while (so.getHandHistory().size() > 17) {
-            so.getHandHistory().remove(so.getHandHistory().get(0));
-        }
-        for (String line : so.getHandHistory()) {
-            p.add(new JLabel(line));
+        log = new JTextArea(22,33);
+        log.setLineWrap(true);
+        log.setWrapStyleWord(true);
+
+        log.setEditable(false);
+        scrollPaneLog = new JScrollPane(log,
+                JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        p.add(scrollPaneLog);
+        for(String s : so.getHandHistory()) {
+            log.append(s + "\r\n");
         }
         return p;
     }
