@@ -10,6 +10,7 @@ import games.XNTupleFuncs;
 
 public class ArenaBlackJack extends Arena {
 
+
     public ArenaBlackJack(String title, boolean withUI) {
         super(title, withUI);
     }

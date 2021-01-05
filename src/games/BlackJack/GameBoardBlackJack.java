@@ -13,6 +13,7 @@ public class GameBoardBlackJack implements GameBoard {
     // infer the current taskState
     private transient GameBoardBlackJackGui m_gameGui = null;
 
+
     private boolean arenaActReq = false;
 
     public GameBoardBlackJack(Arena bjArena) {
@@ -55,6 +56,7 @@ public class GameBoardBlackJack implements GameBoard {
     @Override
     public void updateBoard(StateObservation so, boolean withReset, boolean showValueOnGameboard) {
         StateObserverBlackJack soT = (StateObserverBlackJack) so;
+        soT.updateCurrentSleepDuration(getArena().currentSleepDuration);
 
         if (so != null) {
             assert (so instanceof StateObserverBlackJack)

@@ -12,6 +12,7 @@ import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentEvent;
+import java.util.ArrayList;
 
 import games.Arena;
 import games.BlackJack.StateObserverBlackJack.BlackJackActionDet;
@@ -20,10 +21,9 @@ import tools.Types;
 
 public class GameBoardBlackJackGui extends JFrame {
 
-
-    private JTextArea log;
     JScrollPane scrollPaneLog;
-    int count = 0;
+    int verticalScrollBarMaximumValue;
+    ArrayList<JButton> currentButtons = new ArrayList<>();
 
     class ActionHandler implements ActionListener {
         int action;
@@ -80,9 +80,9 @@ public class GameBoardBlackJackGui extends JFrame {
         spr.putConstraint(SpringLayout.NORTH, dealerZone, 0, SpringLayout.NORTH, window);
         spr.putConstraint(SpringLayout.NORTH, actionZone, 0, SpringLayout.NORTH, window);
 
-        dealerZone.setBackground(new Color(100, 1, 1));
-        playerZone.setBackground(new Color(1, 100, 1));
-        actionZone.setBackground(new Color(1, 1, 100));
+        dealerZone.setBackground(new Color(70, 1, 1));
+        playerZone.setBackground(new Color(1, 70, 1));
+        actionZone.setBackground(new Color(1, 79, 160));
 
         window.add(actionZone);
         window.add(playerZone);
@@ -98,7 +98,6 @@ public class GameBoardBlackJackGui extends JFrame {
 
         m_so = (StateObserverBlackJack) m_gb.getStateObs();
         actionZone.setLayout(new GridLayout(2, 1));
-        playerZone.setLayout(new BoxLayout(playerZone, BoxLayout.Y_AXIS));
 
         this.add(window);
         this.setVisible(true);
@@ -112,25 +111,25 @@ public class GameBoardBlackJackGui extends JFrame {
         clear();
 
         m_so = so;
+        playerZone.setLayout(new GridLayout(so.getNumPlayers(), 1));
         actionZone.add(getActionZone(so));
+        actionZone.add(handHistoryPanel(so));
+
         for (Player p : so.getPlayers()) {
             playerZone.add(playerPanel(p));
         }
         dealerZone.add(dealerPanel(so.getDealer()));
-        actionZone.add(handHistoryPanel(so));
-        scrollPaneLog.getVerticalScrollBar().setValue(
-                scrollPaneLog.getVerticalScrollBar().getMaximum()
-        );
-        System.out.println("ab" + count++);
+
+        toggleButtons(so);
         this.revalidate();
-        this.repaint();
+        repaint();
 
     }
 
-    public void updateWithSleep(StateObserverBlackJack so, long seconds) {
+    public void updateWithSleep(StateObserverBlackJack so, long millSeconds) {
         update(so, false, false);
         try {
-            Thread.sleep(seconds * 1000);
+            Thread.sleep(millSeconds);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -142,9 +141,19 @@ public class GameBoardBlackJackGui extends JFrame {
         actionZone.removeAll();
     }
 
+    public void toggleButtons(StateObserverBlackJack so){
+        ArrayList<String> tmp = new ArrayList<String>();
+        for(Types.ACTIONS a : so.getAvailableActions()){
+            tmp.add(BlackJackActionDet.values()[a.toInt()].name());
+        }
+        for(JButton b : currentButtons){
+            b.setEnabled(tmp.contains(b.getText()));
+        }
+    }
+
     public JLabel getCard(Card c) {
         JLabel cardLabel = new JLabel(c.toString());
-        cardLabel.setFont(cardLabel.getFont().deriveFont((float) 36.0));
+        cardLabel.setFont(cardLabel.getFont().deriveFont((float) (((float)Types.GUI_HELPFONTSIZE) * 2.8)));
         cardLabel.setPreferredSize(new Dimension(60, 80));
         cardLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         cardLabel.setBorder(BorderFactory.createLineBorder(new Color(0, 0, 0), 1));
@@ -156,16 +165,17 @@ public class GameBoardBlackJackGui extends JFrame {
 
     public JPanel getActionZone(StateObserverBlackJack so) {
         JPanel p = new JPanel();
-        p.setLayout(new GridLayout2(so.getAllAvailableActions().size(), 1));
-        for (Types.ACTIONS a : so.getAvailableActions()) {
-            String nameOfAction = BlackJackActionDet.values()[a.toInt()].name();
+        p.setLayout(new GridLayout2(BlackJackActionDet.values().length, 1));
+        for (BlackJackActionDet a: BlackJackActionDet.values()) {
+            String nameOfAction = a.name();
             JButton buttonToAdd = new JButton(nameOfAction);
-            buttonToAdd.addActionListener(new ActionHandler(a.toInt()) {
+            buttonToAdd.addActionListener(new ActionHandler(a.getAction()) {
                 public void actionPerformed(ActionEvent e) {
                     m_gb.humanMove(action);
                 }
             });
-            // buttonToAdd.setEnabled(true);
+            currentButtons.add(buttonToAdd);
+            buttonToAdd.setEnabled(false);
             p.add(buttonToAdd);
         }
         return p;
@@ -173,7 +183,7 @@ public class GameBoardBlackJackGui extends JFrame {
 
     public JPanel handHistoryPanel(StateObserverBlackJack so) {
         JPanel p = new JPanel();
-        log = new JTextArea(22,33);
+        JTextArea log = new JTextArea(22,33);
         log.setLineWrap(true);
         log.setWrapStyleWord(true);
 
@@ -181,6 +191,14 @@ public class GameBoardBlackJackGui extends JFrame {
         scrollPaneLog = new JScrollPane(log,
                 JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        verticalScrollBarMaximumValue = scrollPaneLog.getVerticalScrollBar().getMaximum();
+        scrollPaneLog.getVerticalScrollBar().addAdjustmentListener(
+                e -> {
+                    if ((verticalScrollBarMaximumValue - e.getAdjustable().getMaximum()) == 0)
+                        return;
+                    e.getAdjustable().setValue(e.getAdjustable().getMaximum());
+                    verticalScrollBarMaximumValue = scrollPaneLog.getVerticalScrollBar().getMaximum();
+                });
         p.add(scrollPaneLog);
         for(String s : so.getHandHistory()) {
             log.append(s + "\r\n");
@@ -259,7 +277,7 @@ public class GameBoardBlackJackGui extends JFrame {
         JLabel result = new JLabel(content);
         result.setAlignmentX(Component.CENTER_ALIGNMENT);
         result.setPreferredSize(new Dimension(400, 35));
-        result.setFont(result.getFont().deriveFont((float) 16.0));
+        result.setFont(result.getFont().deriveFont((float) (((float)Types.GUI_HELPFONTSIZE) * 1.2)));
         return result;
     }
 
