@@ -171,7 +171,8 @@ public class GameBoardBlackJackGui extends JFrame {
             JButton buttonToAdd = new JButton(nameOfAction);
             buttonToAdd.addActionListener(new ActionHandler(a.getAction()) {
                 public void actionPerformed(ActionEvent e) {
-                    m_gb.humanMove(action);
+                    if (m_gb.m_Arena.taskState == Arena.Task.PLAY)
+                        m_gb.humanMove(action);
                 }
             });
             currentButtons.add(buttonToAdd);

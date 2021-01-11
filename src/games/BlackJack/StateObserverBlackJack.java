@@ -156,7 +156,12 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public boolean isGameOver() {
-        return false;
+        for (Player p : players){
+            if(p.getChips() > 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -171,11 +176,16 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
 
     @Override
     public boolean isLegalState() {
+        for (Player p : players){
+            if(p.getChips() < 0) {
+                return false;
+            }
+        }
         return true;
     }
 
     @Override
-    public boolean stopInspectOnGameOver() {// ????
+    public boolean stopInspectOnGameOver() {
         return false;
     }
 
@@ -358,8 +368,11 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                 if (playersHand.size() == 2 && currentPlayer.betOnActiveHand() <= currentPlayer.getChips()) {
                     availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.DOUBLEDOWN.getAction()));
                 }
-                // Player can always surrender TODO:
-                availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.SURRENDER.getAction()));
+                // Surrender - player surrenders his hand and gets half of his chips back
+                // Condition: needs to be first action of hand
+                if(playersHand.size() == 2 && !currentPlayer.hasSplitHand()) {
+                    availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.SURRENDER.getAction()));
+                }
             } else { // The hand is finished, the player can only stand/passToNext
                 availableActions.add(Types.ACTIONS.fromInt(BlackJackActionDet.STAND.getAction()));
             }
@@ -657,7 +670,7 @@ public class StateObserverBlackJack extends ObserverBase implements StateObsNond
                                     if (dealer.getActiveHand().isBust()) {// dealer is bust player not
                                         amountToCollect = bet * 2;
                                         r = results.WIN;
-                                    } else {// both not bust
+                                    } else if(!dealer.getActiveHand().checkForBlackJack()){
                                         if (h.getHandValue() > dealer.getActiveHand().getHandValue()) { // player wins
                                             amountToCollect = bet * 2;
                                             r = results.WIN;
