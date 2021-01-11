@@ -228,14 +228,12 @@ public class GameBoardPokerGui extends JFrame {
 
     private Panel getLogPanel(){
         Panel logPanel = new Panel();
-        log = new JTextArea(30, 20);
+        log = new JTextArea(30, 23);
         log.setEditable(false);
         scrollPaneLog = new JScrollPane(log,
                 JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         logPanel.add(scrollPaneLog);
-        //logPanel.setMinimumSize(new Dimension(log.getPreferredSize().width+10,log.getPreferredSize().height));
-        //logPanel.setPreferredSize(new Dimension(log.getPreferredSize().width+10,log.getPreferredSize().height));
 
         return logPanel;
     }
@@ -380,7 +378,6 @@ public class GameBoardPokerGui extends JFrame {
         updatePotValue(soT.getPotSize());
         updatePlayerInfo(soT);
         updateActions(soT);
-
         //repaint();
     }
 
